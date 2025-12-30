@@ -15,12 +15,20 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Custom ATS variants
+        status: "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30",
+        success: "bg-status-success/10 text-status-success hover:bg-status-success/20 border border-status-success/30",
+        warning: "bg-status-warning/10 text-status-warning hover:bg-status-warning/20 border border-status-warning/30",
+        danger: "bg-status-error/10 text-status-error hover:bg-status-error/20 border border-status-error/30",
+        glow: "bg-primary text-primary-foreground hover:shadow-glow hover:bg-primary/90",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        "icon-sm": "h-7 w-7",
+        xl: "h-12 rounded-lg px-8 text-base",
       },
     },
     defaultVariants: {
