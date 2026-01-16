@@ -116,6 +116,7 @@ export function EnhancedSearch({ value, onChange, placeholder = 'Search candidat
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          data-search-input
           className="pl-10 pr-20 h-10 bg-muted/50 border-border/50 focus:bg-background focus:border-primary/50 transition-all"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">

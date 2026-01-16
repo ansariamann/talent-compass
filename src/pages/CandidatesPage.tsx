@@ -164,10 +164,7 @@ export default function CandidatesPage() {
           <div className="flex-1 overflow-auto">
             <CandidateTable
               candidates={filteredCandidates}
-              onSelectCandidate={(c) => {
-                setSelectedCandidate(c);
-                handleOpenDetail(c);
-              }}
+              onSelectCandidate={setSelectedCandidate}
               selectedId={selectedCandidate?.id}
             />
           </div>
