@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
@@ -6,30 +6,33 @@ import { CandidateDetailPanel } from '@/components/candidates/CandidateDetailPan
 import { CandidateDetailModal } from '@/components/candidates/CandidateDetailModal';
 import { CopilotPanel } from '@/components/copilot/CopilotPanel';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
+import { BulkActionsToolbar } from '@/components/candidates/BulkActionsToolbar';
 import { mockCandidates, mockClients } from '@/lib/mock-data';
-import type { Candidate, CandidateFilters as CandidateFiltersType } from '@/types/ats';
+import type { Candidate, CandidateFilters as CandidateFiltersType, CandidateStatus } from '@/types/ats';
 
 export default function CandidatesPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [modalCandidate, setModalCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>(mockCandidates);
   const [filters, setFilters] = useState<CandidateFiltersType>({
     excludeBlacklisted: true,
     excludeLeavers: true,
   });
 
-  // Keyboard navigation
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K to focus search
+      // Cmd/Ctrl + K to focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         const searchInput = document.querySelector('[data-search-input]') as HTMLInputElement;
         searchInput?.focus();
       }
       
-      // Escape to close panels
+      // Escape to close panels/modal
       if (e.key === 'Escape') {
         if (isModalOpen) {
           setIsModalOpen(false);
@@ -41,124 +44,157 @@ export default function CandidatesPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, selectedCandidate]);
+  }, [selectedCandidate, isModalOpen]);
 
-  // Parse advanced search syntax
-  const parseSearch = useCallback((query: string) => {
-    const parsed: { text: string; skill?: string; status?: string; minExp?: number } = { text: '' };
-    
-    // Extract skill: prefix
-    const skillMatch = query.match(/skill:(\w+)/i);
-    if (skillMatch) {
-      parsed.skill = skillMatch[1];
-      query = query.replace(skillMatch[0], '');
+  // Parse search query for special syntax
+  const parseSearchQuery = useCallback((query: string) => {
+    const terms: { type: string; value: string }[] = [];
+    const regex = /(\w+):([^\s]+)/g;
+    let match;
+    let remainingQuery = query;
+
+    while ((match = regex.exec(query)) !== null) {
+      terms.push({ type: match[1], value: match[2] });
+      remainingQuery = remainingQuery.replace(match[0], '').trim();
     }
-    
-    // Extract status: prefix
-    const statusMatch = query.match(/status:(\w+)/i);
-    if (statusMatch) {
-      parsed.status = statusMatch[1];
-      query = query.replace(statusMatch[0], '');
-    }
-    
-    // Extract exp:>N prefix
-    const expMatch = query.match(/exp:>(\d+)/i);
-    if (expMatch) {
-      parsed.minExp = parseInt(expMatch[1]);
-      query = query.replace(expMatch[0], '');
-    }
-    
-    parsed.text = query.trim();
-    return parsed;
+
+    return { terms, freeText: remainingQuery };
   }, []);
 
-  // Filter and search candidates
+  // Filter candidates
   const filteredCandidates = useMemo(() => {
-    let results = mockCandidates;
+    let result = candidates;
 
-    // Apply default exclusions
-    if (filters.excludeBlacklisted) {
-      results = results.filter(c => !c.isBlacklisted);
-    }
-    if (filters.excludeLeavers) {
-      results = results.filter(c => !c.isLeaver);
-    }
-
-    // Parse and apply search
-    if (searchQuery) {
-      const parsed = parseSearch(searchQuery);
-      
-      // Text search
-      if (parsed.text) {
-        const query = parsed.text.toLowerCase();
-        results = results.filter(c => 
-          c.name.toLowerCase().includes(query) ||
-          c.email.toLowerCase().includes(query) ||
-          c.skills.some(s => s.toLowerCase().includes(query))
-        );
-      }
-      
-      // Skill filter from search
-      if (parsed.skill) {
-        results = results.filter(c => 
-          c.skills.some(s => s.toLowerCase().includes(parsed.skill!.toLowerCase()))
-        );
-      }
-      
-      // Status filter from search
-      if (parsed.status) {
-        results = results.filter(c => 
-          c.currentStatus.toLowerCase().includes(parsed.status!.toLowerCase())
-        );
-      }
-      
-      // Experience filter from search
-      if (parsed.minExp) {
-        results = results.filter(c => c.experience > parsed.minExp!);
-      }
-    }
-
-    // Apply status filter
+    // Apply status filters
     if (filters.status?.length) {
-      results = results.filter(c => filters.status!.includes(c.currentStatus));
+      result = result.filter(c => filters.status!.includes(c.currentStatus));
     }
 
-    // Apply skills filter
+    // Apply skill filters
     if (filters.skills?.length) {
-      results = results.filter(c => 
-        filters.skills!.some(skill => c.skills.includes(skill))
+      result = result.filter(c => 
+        filters.skills!.some(skill => 
+          c.skills.some(s => s.toLowerCase().includes(skill.toLowerCase()))
+        )
       );
     }
 
-    return results;
-  }, [searchQuery, filters, parseSearch]);
+    // Apply client filter
+    if (filters.clientId) {
+      // In real app, this would filter by associated applications
+    }
+
+    // Apply search query
+    if (searchQuery) {
+      const { terms, freeText } = parseSearchQuery(searchQuery);
+
+      // Apply structured terms
+      terms.forEach(term => {
+        switch (term.type.toLowerCase()) {
+          case 'skill':
+            result = result.filter(c => 
+              c.skills.some(s => s.toLowerCase().includes(term.value.toLowerCase()))
+            );
+            break;
+          case 'status':
+            result = result.filter(c => 
+              c.currentStatus.toLowerCase().includes(term.value.toLowerCase())
+            );
+            break;
+          case 'exp':
+            const expMatch = term.value.match(/([<>]=?)?(\d+)/);
+            if (expMatch) {
+              const op = expMatch[1] || '>=';
+              const value = parseInt(expMatch[2]);
+              result = result.filter(c => {
+                switch (op) {
+                  case '>': return c.experience > value;
+                  case '>=': return c.experience >= value;
+                  case '<': return c.experience < value;
+                  case '<=': return c.experience <= value;
+                  default: return c.experience >= value;
+                }
+              });
+            }
+            break;
+        }
+      });
+
+      // Apply free text search
+      if (freeText) {
+        const lower = freeText.toLowerCase();
+        result = result.filter(c => 
+          c.name.toLowerCase().includes(lower) ||
+          c.email.toLowerCase().includes(lower) ||
+          c.skills.some(s => s.toLowerCase().includes(lower))
+        );
+      }
+    }
+
+    return result;
+  }, [candidates, filters, searchQuery, parseSearchQuery]);
+
+  // Get selected candidates for bulk actions
+  const selectedCandidates = useMemo(() => {
+    return candidates.filter(c => selectedIds.includes(c.id));
+  }, [candidates, selectedIds]);
 
   const handleOpenDetail = (candidate: Candidate) => {
     setModalCandidate(candidate);
     setIsModalOpen(true);
   };
 
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const handleBulkStatusChange = (candidateIds: string[], status: CandidateStatus) => {
+    setCandidates(prev => prev.map(c => 
+      candidateIds.includes(c.id) ? { ...c, currentStatus: status, updatedAt: new Date().toISOString() } : c
+    ));
+    setSelectedIds([]);
+  };
+
+  const handleBulkAssignToClient = (candidateIds: string[], clientId: string) => {
+    // In real app, this would create applications for the candidates
+    console.log('Assigning candidates', candidateIds, 'to client', clientId);
+    setSelectedIds([]);
+  };
+
+  const SearchComponent = (
+    <EnhancedSearch
+      value={searchQuery}
+      onChange={setSearchQuery}
+      placeholder="Search candidates... (⌘K)"
+    />
+  );
+
   return (
-    <DashboardLayout 
-      title="Candidates" 
-      searchComponent={
-        <EnhancedSearch 
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search candidates, skills, or use filters..."
-          className="w-80"
-        />
-      }
-    >
-      <div className="flex h-[calc(100vh-3.5rem)]">
-        {/* Main content */}
-        <div className="flex-1 flex flex-col min-w-0">
+    <DashboardLayout title="Candidates" searchComponent={SearchComponent}>
+      <div className="flex h-[calc(100vh-4rem)]">
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Filters */}
-          <CandidateFilters 
-            filters={filters}
-            onFiltersChange={setFilters}
-            clients={mockClients.map(c => ({ id: c.id, name: c.name }))}
-          />
+          <div className="shrink-0">
+            <CandidateFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              clients={mockClients}
+            />
+          </div>
+
+          {/* Bulk Actions Toolbar */}
+          {selectedIds.length > 0 && (
+            <div className="shrink-0 p-4 border-b border-border">
+              <BulkActionsToolbar
+                selectedCandidates={selectedCandidates}
+                clients={mockClients}
+                onClearSelection={handleClearSelection}
+                onStatusChange={handleBulkStatusChange}
+                onAssignToClient={handleBulkAssignToClient}
+              />
+            </div>
+          )}
 
           {/* Table */}
           <div className="flex-1 overflow-auto">
@@ -166,43 +202,25 @@ export default function CandidatesPage() {
               candidates={filteredCandidates}
               onSelectCandidate={setSelectedCandidate}
               selectedId={selectedCandidate?.id}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
             />
-          </div>
-
-          {/* Footer stats */}
-          <div className="px-6 py-3 border-t border-border bg-muted/30 flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Showing <span className="font-mono text-foreground">{filteredCandidates.length}</span> candidates
-            </span>
-            <div className="flex gap-4">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-status-success" />
-                <span className="kbd">↑↓</span> Navigate
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="kbd">Enter</span> View details
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="kbd">⌘K</span> Search
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="kbd">Esc</span> Close
-              </span>
-            </div>
           </div>
         </div>
 
         {/* Detail panel */}
         {selectedCandidate && (
-          <CandidateDetailPanel
-            candidate={selectedCandidate}
-            onClose={() => setSelectedCandidate(null)}
-            onOpenFull={() => handleOpenDetail(selectedCandidate)}
-          />
+          <div className="w-96 shrink-0 border-l border-border overflow-auto">
+            <CandidateDetailPanel 
+              candidate={selectedCandidate}
+              onClose={() => setSelectedCandidate(null)}
+              onOpenFull={() => handleOpenDetail(selectedCandidate)}
+            />
+          </div>
         )}
 
-        {/* Copilot panel - always visible */}
-        <div className="w-80 shrink-0">
+        {/* Copilot panel - always visible with minimize support */}
+        <div className="shrink-0">
           <CopilotPanel 
             context={selectedCandidate ? {
               candidateId: selectedCandidate.id,
@@ -217,10 +235,7 @@ export default function CandidatesPage() {
         <CandidateDetailModal
           candidate={modalCandidate}
           open={isModalOpen}
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setModalCandidate(null);
-          }}
+          onOpenChange={setIsModalOpen}
         />
       )}
     </DashboardLayout>

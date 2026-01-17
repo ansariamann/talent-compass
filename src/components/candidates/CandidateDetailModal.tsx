@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Mail, 
   Phone, 
@@ -32,7 +32,7 @@ import { Separator } from '@/components/ui/separator';
 import type { Candidate, AuditEntry } from '@/types/ats';
 
 interface CandidateDetailModalProps {
-  candidate: Candidate;
+  candidate: Candidate | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -104,6 +104,13 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
   const [isEditing, setIsEditing] = useState(false);
   const [editedCandidate, setEditedCandidate] = useState(candidate);
 
+  // Update edited candidate when candidate prop changes
+  useEffect(() => {
+    if (candidate) {
+      setEditedCandidate(candidate);
+    }
+  }, [candidate]);
+
   const handleSave = () => {
     // In real app, call API to save
     console.log('Saving candidate:', editedCandidate);
@@ -114,6 +121,8 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
     setEditedCandidate(candidate);
     setIsEditing(false);
   };
+
+  if (!candidate) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
