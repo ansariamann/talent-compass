@@ -4,7 +4,7 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
 import { CandidateDetailPanel } from '@/components/candidates/CandidateDetailPanel';
 import { CandidateDetailModal } from '@/components/candidates/CandidateDetailModal';
-import { CopilotPanel } from '@/components/copilot/CopilotPanel';
+import { FloatingCopilot } from '@/components/copilot/FloatingCopilot';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import { BulkActionsToolbar } from '@/components/candidates/BulkActionsToolbar';
 import { mockCandidates, mockClients } from '@/lib/mock-data';
@@ -32,10 +32,12 @@ export default function CandidatesPage() {
         searchInput?.focus();
       }
       
-      // Escape to close panels/modal
+      // Escape to close panels/modal (priority: modal > detail panel)
       if (e.key === 'Escape') {
+        e.preventDefault();
         if (isModalOpen) {
           setIsModalOpen(false);
+          setModalCandidate(null);
         } else if (selectedCandidate) {
           setSelectedCandidate(null);
         }
@@ -144,6 +146,15 @@ export default function CandidatesPage() {
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setModalCandidate(null);
+  };
+
+  const handleClosePanel = () => {
+    setSelectedCandidate(null);
+  };
+
   const handleClearSelection = () => {
     setSelectedIds([]);
   };
@@ -156,7 +167,6 @@ export default function CandidatesPage() {
   };
 
   const handleBulkAssignToClient = (candidateIds: string[], clientId: string) => {
-    // In real app, this would create applications for the candidates
     console.log('Assigning candidates', candidateIds, 'to client', clientId);
     setSelectedIds([]);
   };
@@ -210,24 +220,14 @@ export default function CandidatesPage() {
 
         {/* Detail panel */}
         {selectedCandidate && (
-          <div className="w-96 shrink-0 border-l border-border overflow-auto">
+          <div className="w-96 shrink-0 border-l border-border overflow-auto animate-in slide-in-from-right-4 duration-200">
             <CandidateDetailPanel 
               candidate={selectedCandidate}
-              onClose={() => setSelectedCandidate(null)}
+              onClose={handleClosePanel}
               onOpenFull={() => handleOpenDetail(selectedCandidate)}
             />
           </div>
         )}
-
-        {/* Copilot panel - always visible with minimize support */}
-        <div className="shrink-0">
-          <CopilotPanel 
-            context={selectedCandidate ? {
-              candidateId: selectedCandidate.id,
-              candidateName: selectedCandidate.name,
-            } : undefined}
-          />
-        </div>
       </div>
 
       {/* Detail Modal */}
@@ -235,9 +235,19 @@ export default function CandidatesPage() {
         <CandidateDetailModal
           candidate={modalCandidate}
           open={isModalOpen}
-          onOpenChange={setIsModalOpen}
+          onOpenChange={(open) => {
+            if (!open) handleCloseModal();
+          }}
         />
       )}
+
+      {/* Floating AI Copilot - bottom right */}
+      <FloatingCopilot 
+        context={selectedCandidate ? {
+          candidateId: selectedCandidate.id,
+          candidateName: selectedCandidate.name,
+        } : undefined}
+      />
     </DashboardLayout>
   );
 }

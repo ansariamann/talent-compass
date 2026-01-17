@@ -25,7 +25,7 @@ interface CandidateDetailPanelProps {
 
 export function CandidateDetailPanel({ candidate, onClose, onOpenFull }: CandidateDetailPanelProps) {
   return (
-    <div className="w-[420px] h-full border-l border-border bg-card flex flex-col animate-slide-in-right">
+    <div className="h-full border-l border-border bg-card flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-border flex items-start justify-between bg-gradient-to-b from-muted/50 to-transparent">
         <div className="flex items-center gap-3">
