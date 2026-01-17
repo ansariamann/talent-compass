@@ -1,9 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, AlertCircle, Info } from 'lucide-react';
+import { 
+  Sparkles, 
+  Send, 
+  Loader2, 
+  AlertCircle,
+  Bot,
+  Minimize2,
+  Maximize2,
+  MessageSquare,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface Message {
   id: string;
@@ -23,9 +33,9 @@ interface CopilotPanelProps {
 }
 
 const suggestedQuestions = [
-  "Why was this candidate flagged?",
   "Summarize this resume",
-  "What makes this candidate stand out?",
+  "Why was this candidate flagged?",
+  "What are their key strengths?",
   "Compare to similar candidates",
 ];
 
@@ -33,12 +43,15 @@ export function CopilotPanel({ context }: CopilotPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Scroll to bottom on new messages
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
     }
   }, [messages]);
 
@@ -46,31 +59,30 @@ export function CopilotPanel({ context }: CopilotPanelProps) {
     if (!query.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: crypto.randomUUID(),
+      id: `msg-${Date.now()}`,
       role: 'user',
       content: query,
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    // Add loading message
-    const loadingId = crypto.randomUUID();
-    setMessages(prev => [...prev, {
-      id: loadingId,
+    const assistantId = `msg-${Date.now() + 1}`;
+    const loadingMessage: Message = {
+      id: assistantId,
       role: 'assistant',
       content: '',
       timestamp: new Date(),
       isLoading: true,
-    }]);
+    };
+
+    setMessages(prev => [...prev, userMessage, loadingMessage]);
+    setInput('');
+    setIsLoading(true);
 
     try {
-      // Mock API call - replace with actual copilotApi.query()
+      // Simulate API call - in real app, this would call copilotApi.query
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Mock response
+      // Mock response based on query
       const mockResponses: Record<string, string> = {
         'why was this candidate flagged': `Based on the system analysis, this candidate was flagged as a **potential duplicate** because:
 
@@ -99,7 +111,7 @@ This candidate has a solid background with relevant experience for the current o
       };
 
       const lowerQuery = query.toLowerCase();
-      let response = mockResponses.default;
+      let response = mockResponses['default'];
       
       for (const [key, value] of Object.entries(mockResponses)) {
         if (lowerQuery.includes(key)) {
@@ -108,17 +120,15 @@ This candidate has a solid background with relevant experience for the current o
         }
       }
 
-      // Replace loading message with actual response
       setMessages(prev => prev.map(msg => 
-        msg.id === loadingId 
+        msg.id === assistantId 
           ? { ...msg, content: response, isLoading: false }
           : msg
       ));
     } catch (error) {
-      // Replace loading message with error
       setMessages(prev => prev.map(msg => 
-        msg.id === loadingId 
-          ? { ...msg, content: '', isLoading: false, error: 'Failed to get response. Please try again.' }
+        msg.id === assistantId 
+          ? { ...msg, error: 'Failed to get response. Please try again.', isLoading: false }
           : msg
       ));
     } finally {
@@ -126,18 +136,55 @@ This candidate has a solid background with relevant experience for the current o
     }
   };
 
+  // Minimized view
+  if (isMinimized) {
+    return (
+      <div className="h-full flex flex-col bg-card border-l border-border">
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="flex flex-col items-center gap-2 p-4 hover:bg-muted/50 transition-colors h-full"
+        >
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <Maximize2 className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground [writing-mode:vertical-lr] rotate-180">
+              HR Copilot
+            </span>
+          </div>
+          {messages.length > 0 && (
+            <Badge variant="secondary" className="mt-2">
+              {messages.filter(m => m.role === 'user').length}
+            </Badge>
+          )}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-card border-l border-border">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold">HR Copilot</h3>
+              <p className="text-xs text-muted-foreground">AI-powered insights (read-only)</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold">HR Copilot</h3>
-            <p className="text-xs text-muted-foreground">AI-powered insights (read-only)</p>
-          </div>
+          <Button 
+            variant="ghost" 
+            size="icon-sm"
+            onClick={() => setIsMinimized(true)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </Button>
         </div>
 
         {context?.candidateName && (
@@ -149,10 +196,10 @@ This candidate has a solid background with relevant experience for the current o
       </div>
 
       {/* Disclaimer */}
-      <div className="mx-4 mt-4 p-3 rounded-lg bg-status-info/5 border border-status-info/20 flex gap-2">
-        <Info className="w-4 h-4 text-status-info shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground">
-          Copilot provides AI-generated insights only. It cannot modify data or trigger actions.
+      <div className="px-4 py-2 bg-muted/30 border-b border-border">
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <Bot className="w-3 h-3" />
+          AI-generated insights are advisory only
         </p>
       </div>
 
@@ -226,20 +273,15 @@ This candidate has a solid background with relevant experience for the current o
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about this candidate..."
-            variant="ghost"
-            className="flex-1"
             disabled={isLoading}
+            className="flex-1"
           />
           <Button 
             type="submit" 
             size="icon" 
             disabled={!input.trim() || isLoading}
           >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            <Send className="w-4 h-4" />
           </Button>
         </form>
       </div>

@@ -3,7 +3,6 @@ import {
   ChevronDown, 
   ChevronUp, 
   MoreHorizontal,
-  ExternalLink,
   Flag,
   AlertCircle,
   CheckCircle2,
@@ -12,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from './StatusBadge';
 import type { Candidate, CandidateFlag } from '@/types/ats';
 
@@ -20,6 +20,8 @@ interface CandidateTableProps {
   onSelectCandidate: (candidate: Candidate) => void;
   selectedId?: string;
   isLoading?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const flagIcons: Record<CandidateFlag['type'], React.ComponentType<{ className?: string }>> = {
@@ -34,7 +36,9 @@ export function CandidateTable({
   candidates, 
   onSelectCandidate, 
   selectedId,
-  isLoading 
+  isLoading,
+  selectedIds = [],
+  onSelectionChange,
 }: CandidateTableProps) {
   const [sortField, setSortField] = useState<'name' | 'experience' | 'updatedAt'>('updatedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -69,6 +73,29 @@ export function CandidateTable({
     return sortDir === 'asc' ? comparison : -comparison;
   });
 
+  const handleCheckboxChange = (candidateId: string, checked: boolean) => {
+    if (!onSelectionChange) return;
+    
+    if (checked) {
+      onSelectionChange([...selectedIds, candidateId]);
+    } else {
+      onSelectionChange(selectedIds.filter(id => id !== candidateId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (!onSelectionChange) return;
+    
+    if (checked) {
+      onSelectionChange(sortedCandidates.map(c => c.id));
+    } else {
+      onSelectionChange([]);
+    }
+  };
+
+  const allSelected = sortedCandidates.length > 0 && selectedIds.length === sortedCandidates.length;
+  const someSelected = selectedIds.length > 0 && selectedIds.length < sortedCandidates.length;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -82,6 +109,16 @@ export function CandidateTable({
       <table className="data-table">
         <thead>
           <tr>
+            {onSelectionChange && (
+              <th className="w-12">
+                <Checkbox 
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  className={cn(someSelected && "data-[state=unchecked]:bg-primary/30")}
+                  aria-label="Select all candidates"
+                />
+              </th>
+            )}
             <th 
               className="cursor-pointer select-none" 
               onClick={() => handleSort('name')}
@@ -113,75 +150,88 @@ export function CandidateTable({
           </tr>
         </thead>
         <tbody>
-          {sortedCandidates.map((candidate) => (
-            <tr 
-              key={candidate.id}
-              onClick={() => onSelectCandidate(candidate)}
-              className={cn(
-                "cursor-pointer transition-colors",
-                selectedId === candidate.id && "bg-accent"
-              )}
-            >
-              <td>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                    {candidate.name.split(' ').map(n => n[0]).join('')}
+          {sortedCandidates.map((candidate) => {
+            const isChecked = selectedIds.includes(candidate.id);
+            return (
+              <tr 
+                key={candidate.id}
+                onClick={() => onSelectCandidate(candidate)}
+                className={cn(
+                  "cursor-pointer transition-colors",
+                  selectedId === candidate.id && "bg-accent",
+                  isChecked && "bg-primary/5"
+                )}
+              >
+                {onSelectionChange && (
+                  <td onClick={e => e.stopPropagation()}>
+                    <Checkbox 
+                      checked={isChecked}
+                      onCheckedChange={(checked) => handleCheckboxChange(candidate.id, checked as boolean)}
+                      aria-label={`Select ${candidate.name}`}
+                    />
+                  </td>
+                )}
+                <td>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                      {candidate.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <div className="font-medium">{candidate.name}</div>
+                      <div className="text-xs text-muted-foreground">{candidate.email}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-medium">{candidate.name}</div>
-                    <div className="text-xs text-muted-foreground">{candidate.email}</div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div className="flex flex-wrap gap-1 max-w-xs">
-                  {candidate.skills.slice(0, 3).map((skill) => (
-                    <Badge key={skill} variant="secondary" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {candidate.skills.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{candidate.skills.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              </td>
-              <td>
-                <span className="font-mono text-sm">{candidate.experience} yrs</span>
-              </td>
-              <td>
-                <StatusBadge status={candidate.currentStatus} type="candidate" />
-              </td>
-              <td>
-                <div className="flex gap-1">
-                  {candidate.flags.map((flag, i) => {
-                    const Icon = flagIcons[flag.type];
-                    return (
-                      <Badge 
-                        key={i} 
-                        variant={flag.type}
-                        className="gap-1"
-                      >
-                        <Icon className="w-3 h-3" />
-                        {flag.type}
+                </td>
+                <td>
+                  <div className="flex flex-wrap gap-1 max-w-xs">
+                    {candidate.skills.slice(0, 3).map((skill) => (
+                      <Badge key={skill} variant="secondary" className="text-xs">
+                        {skill}
                       </Badge>
-                    );
-                  })}
-                </div>
-              </td>
-              <td>
-                <span className="text-xs text-muted-foreground font-mono">
-                  {new Date(candidate.updatedAt).toLocaleDateString()}
-                </span>
-              </td>
-              <td>
-                <Button variant="ghost" size="icon-sm" onClick={(e) => e.stopPropagation()}>
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </td>
-            </tr>
-          ))}
+                    ))}
+                    {candidate.skills.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{candidate.skills.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                </td>
+                <td>
+                  <span className="font-mono text-sm">{candidate.experience} yrs</span>
+                </td>
+                <td>
+                  <StatusBadge status={candidate.currentStatus} type="candidate" />
+                </td>
+                <td>
+                  <div className="flex gap-1">
+                    {candidate.flags.map((flag, i) => {
+                      const Icon = flagIcons[flag.type];
+                      return (
+                        <Badge 
+                          key={i} 
+                          variant={flag.type}
+                          className="gap-1"
+                        >
+                          <Icon className="w-3 h-3" />
+                          {flag.type}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </td>
+                <td>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {new Date(candidate.updatedAt).toLocaleDateString()}
+                  </span>
+                </td>
+                <td>
+                  <Button variant="ghost" size="icon-sm" onClick={(e) => e.stopPropagation()}>
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
