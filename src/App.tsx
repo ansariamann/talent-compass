@@ -3,6 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
 import Index from "./pages/Index";
 import CandidatesPage from "./pages/CandidatesPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
@@ -22,23 +25,26 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/candidates" element={<CandidatesPage />} />
-          <Route path="/applications" element={<ApplicationsPage />} />
-          <Route path="/clients" element={<ClientsPage />} />
-          <Route path="/monitoring" element={<MonitoringPage />} />
-          <Route path="/database" element={<DatabasePage />} />
-          <Route path="/database/:table" element={<DatabasePage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/candidates" element={<ProtectedRoute><CandidatesPage /></ProtectedRoute>} />
+            <Route path="/applications" element={<ProtectedRoute><ApplicationsPage /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+            <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
+            <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
+            <Route path="/database/:table" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
