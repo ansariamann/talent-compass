@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User } from '@/types/ats';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface AuthContextType {
   user: User | null;
@@ -45,7 +45,11 @@ export async function fetchWithAuth<T>(
     throw new Error(errorText || 'Request failed');
   }
 
-  return response.json();
+  // Handle empty responses
+  const text = await response.text();
+  if (!text) return {} as T;
+
+  return JSON.parse(text);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -56,6 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = getToken();
     if (!token) {
       setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
+    // Skip API check for demo tokens
+    if (token.startsWith('demo-token-')) {
+      setUser({
+        id: 'demo-user-1',
+        email: 'admin@acmecorp.com',
+        name: 'Admin User',
+        role: 'hr_admin',
+        tenantId: 'acme-corp',
+        createdAt: new Date().toISOString(),
+      });
       setIsLoading(false);
       return;
     }
@@ -79,13 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      
-      // Demo mode: Accept test credentials when no backend is available
+
+      // Demo mode credentials
       const DEMO_CREDENTIALS = {
         email: 'admin@acmecorp.com',
         password: 'admin123',
       };
-      
+
       const DEMO_USER: User = {
         id: 'demo-user-1',
         email: DEMO_CREDENTIALS.email,
@@ -95,31 +113,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
 
-      // Try real API first
+      // Try real API first - Backend uses OAuth2 form format
       try {
+        // Create form data for OAuth2 endpoint
+        const formData = new URLSearchParams();
+        formData.append('username', email); // OAuth2 expects 'username', not 'email'
+        formData.append('password', password);
+
         const response = await fetch(`${API_BASE}/auth/login`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
         });
 
         if (response.ok) {
           const data = await response.json();
           setToken(data.access_token || data.token);
-          const userData = await fetchWithAuth<User>('/auth/me');
-          setUser(userData);
+
+          // Fetch user data
+          try {
+            const userData = await fetchWithAuth<User>('/auth/me');
+            setUser(userData);
+          } catch {
+            // If /auth/me fails, use a basic user object
+            setUser({
+              id: 'user-1',
+              email: email,
+              name: email.split('@')[0],
+              role: 'hr_admin',
+              tenantId: 'default',
+              createdAt: new Date().toISOString(),
+            });
+          }
           return { success: true };
         }
-        
-        // If API returns error (not network failure), check demo credentials
+
+        // If API returns error, show the error message
         if (response.status !== 404) {
-          const errorData = await response.json().catch(() => ({}));
-          return { 
-            success: false, 
-            error: errorData.detail || errorData.message || 'Invalid credentials' 
-          };
+          try {
+            const errorData = await response.json();
+            return {
+              success: false,
+              error: errorData.error?.message || errorData.detail || errorData.message || 'Invalid credentials'
+            };
+          } catch {
+            return { success: false, error: 'Invalid credentials' };
+          }
         }
-      } catch {
+      } catch (err) {
+        console.error('Login API error:', err);
         // Network error - fall through to demo mode
       }
 
@@ -129,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(DEMO_USER);
         return { success: true };
       }
-      
+
       return { success: false, error: 'Invalid credentials' };
     } catch (error) {
       console.error('Login error:', error);
@@ -141,7 +185,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetchWithAuth('/auth/logout', { method: 'POST' });
+      const token = getToken();
+      if (token && !token.startsWith('demo-token-')) {
+        await fetchWithAuth('/auth/logout', { method: 'POST' });
+      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

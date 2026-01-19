@@ -7,7 +7,9 @@ import { CandidateDetailModal } from '@/components/candidates/CandidateDetailMod
 import { FloatingCopilot } from '@/components/copilot/FloatingCopilot';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import { BulkActionsToolbar } from '@/components/candidates/BulkActionsToolbar';
-import { mockCandidates, mockClients } from '@/lib/mock-data';
+import { useCandidates, useUpdateCandidate } from '@/hooks/useCandidates';
+import { mockClients } from '@/lib/mock-data'; // Clients still from mock until backend endpoint exists
+import { Loader2, AlertCircle } from 'lucide-react';
 import type { Candidate, CandidateFilters as CandidateFiltersType, CandidateStatus } from '@/types/ats';
 
 export default function CandidatesPage() {
@@ -16,11 +18,30 @@ export default function CandidatesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [candidates, setCandidates] = useState<Candidate[]>(mockCandidates);
+  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<CandidateFiltersType>({
     excludeBlacklisted: true,
     excludeLeavers: true,
   });
+
+  // Fetch candidates from API
+  const {
+    data: candidatesResponse,
+    isLoading,
+    error,
+    refetch
+  } = useCandidates(
+    { ...filters, search: searchQuery },
+    page,
+    25
+  );
+
+  const updateCandidateMutation = useUpdateCandidate();
+
+  // Get candidates array from response
+  const candidates = useMemo(() => {
+    return candidatesResponse?.data || [];
+  }, [candidatesResponse]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -31,7 +52,7 @@ export default function CandidatesPage() {
         const searchInput = document.querySelector('[data-search-input]') as HTMLInputElement;
         searchInput?.focus();
       }
-      
+
       // Escape to close panels/modal (priority: modal > detail panel)
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -63,43 +84,32 @@ export default function CandidatesPage() {
     return { terms, freeText: remainingQuery };
   }, []);
 
-  // Filter candidates
+  // Filter candidates locally for client-side filters not supported by API
   const filteredCandidates = useMemo(() => {
     let result = candidates;
 
-    // Apply status filters
-    if (filters.status?.length) {
-      result = result.filter(c => filters.status!.includes(c.currentStatus));
+    // Apply local filters that aren't handled by API
+    if (filters.excludeBlacklisted) {
+      result = result.filter(c => !c.isBlacklisted);
     }
 
-    // Apply skill filters
-    if (filters.skills?.length) {
-      result = result.filter(c => 
-        filters.skills!.some(skill => 
-          c.skills.some(s => s.toLowerCase().includes(skill.toLowerCase()))
-        )
-      );
+    if (filters.excludeLeavers) {
+      result = result.filter(c => !c.isLeaver);
     }
 
-    // Apply client filter
-    if (filters.clientId) {
-      // In real app, this would filter by associated applications
-    }
-
-    // Apply search query
+    // Apply skill filters locally if search has special syntax
     if (searchQuery) {
       const { terms, freeText } = parseSearchQuery(searchQuery);
 
-      // Apply structured terms
       terms.forEach(term => {
         switch (term.type.toLowerCase()) {
           case 'skill':
-            result = result.filter(c => 
+            result = result.filter(c =>
               c.skills.some(s => s.toLowerCase().includes(term.value.toLowerCase()))
             );
             break;
           case 'status':
-            result = result.filter(c => 
+            result = result.filter(c =>
               c.currentStatus.toLowerCase().includes(term.value.toLowerCase())
             );
             break;
@@ -122,10 +132,10 @@ export default function CandidatesPage() {
         }
       });
 
-      // Apply free text search
+      // Apply free text search locally
       if (freeText) {
         const lower = freeText.toLowerCase();
-        result = result.filter(c => 
+        result = result.filter(c =>
           c.name.toLowerCase().includes(lower) ||
           c.email.toLowerCase().includes(lower) ||
           c.skills.some(s => s.toLowerCase().includes(lower))
@@ -138,8 +148,8 @@ export default function CandidatesPage() {
 
   // Get selected candidates for bulk actions
   const selectedCandidates = useMemo(() => {
-    return candidates.filter(c => selectedIds.includes(c.id));
-  }, [candidates, selectedIds]);
+    return filteredCandidates.filter(c => selectedIds.includes(c.id));
+  }, [filteredCandidates, selectedIds]);
 
   const handleOpenDetail = (candidate: Candidate) => {
     setModalCandidate(candidate);
@@ -159,11 +169,16 @@ export default function CandidatesPage() {
     setSelectedIds([]);
   };
 
-  const handleBulkStatusChange = (candidateIds: string[], status: CandidateStatus) => {
-    setCandidates(prev => prev.map(c => 
-      candidateIds.includes(c.id) ? { ...c, currentStatus: status, updatedAt: new Date().toISOString() } : c
-    ));
+  const handleBulkStatusChange = async (candidateIds: string[], status: CandidateStatus) => {
+    // Update each candidate via API
+    for (const id of candidateIds) {
+      await updateCandidateMutation.mutateAsync({
+        id,
+        data: { currentStatus: status },
+      });
+    }
     setSelectedIds([]);
+    refetch();
   };
 
   const handleBulkAssignToClient = (candidateIds: string[], clientId: string) => {
@@ -178,6 +193,43 @@ export default function CandidatesPage() {
       placeholder="Search candidates... (⌘K)"
     />
   );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Candidates" searchComponent={SearchComponent}>
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading candidates...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout title="Candidates" searchComponent={SearchComponent}>
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+            <p className="text-destructive font-medium">Failed to load candidates</p>
+            <p className="text-sm text-muted-foreground max-w-md">
+              {error.message || 'An unexpected error occurred. Please try again.'}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Candidates" searchComponent={SearchComponent}>
@@ -216,12 +268,40 @@ export default function CandidatesPage() {
               onSelectionChange={setSelectedIds}
             />
           </div>
+
+          {/* Pagination */}
+          {candidatesResponse && candidatesResponse.totalPages > 1 && (
+            <div className="shrink-0 p-4 border-t border-border flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Showing {filteredCandidates.length} of {candidatesResponse.total} candidates
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span className="px-3 py-1 text-sm">
+                  Page {page} of {candidatesResponse.totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(candidatesResponse.totalPages, p + 1))}
+                  disabled={page === candidatesResponse.totalPages}
+                  className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Detail panel */}
         {selectedCandidate && (
           <div className="w-96 shrink-0 border-l border-border overflow-auto animate-in slide-in-from-right-4 duration-200">
-            <CandidateDetailPanel 
+            <CandidateDetailPanel
               candidate={selectedCandidate}
               onClose={handleClosePanel}
               onOpenFull={() => handleOpenDetail(selectedCandidate)}
@@ -242,7 +322,7 @@ export default function CandidatesPage() {
       )}
 
       {/* Floating AI Copilot - bottom right */}
-      <FloatingCopilot 
+      <FloatingCopilot
         context={selectedCandidate ? {
           candidateId: selectedCandidate.id,
           candidateName: selectedCandidate.name,

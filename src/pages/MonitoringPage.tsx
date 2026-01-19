@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
-import { mockCandidates, mockApplications, mockClients } from '@/lib/mock-data';
-import { candidatesApi } from '@/lib/api';
+import { useCandidates, useCandidateSearch, useCandidateStatistics } from '@/hooks/useCandidates';
+import { useApplications, useApplicationStatistics } from '@/hooks/useApplications';
 import { Candidate } from '@/types/ats';
-import { 
-  Users, 
-  FileText, 
-  Building2, 
+import {
+  Users,
+  FileText,
+  Building2,
   TrendingUp,
   Clock,
   CheckCircle2,
@@ -20,56 +20,56 @@ import {
 export default function MonitoringPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Candidate[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
+  // Fetch data from API
+  const { data: candidatesResponse, isLoading: isLoadingCandidates } = useCandidates({}, 1, 100);
+  const { data: applicationsResponse, isLoading: isLoadingApplications } = useApplications({}, 1, 100);
+  const { data: candidateStats } = useCandidateStatistics();
+  const { data: applicationStats } = useApplicationStatistics();
+  const { data: searchResults, isLoading: isSearching } = useCandidateSearch(searchQuery);
 
-    setIsSearching(true);
-    try {
-      // Try API first, fallback to mock data filter
-      try {
-        const results = await candidatesApi.search(query);
-        setSearchResults(results);
-      } catch {
-        // Fallback to local mock search
-        const filtered = mockCandidates.filter(c => 
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          c.email.toLowerCase().includes(query.toLowerCase()) ||
-          c.skills.some(s => s.toLowerCase().includes(query.toLowerCase())) ||
-          c.currentStatus.toLowerCase().includes(query.toLowerCase())
-        );
-        setSearchResults(filtered);
-      }
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  const candidates = candidatesResponse?.data || [];
+  const applications = applicationsResponse?.data || [];
 
+  // Calculate stats from real data
   const stats = {
-    totalCandidates: mockCandidates.length,
-    activeCandidates: mockCandidates.filter(c => !c.isBlacklisted && !c.isLeaver).length,
-    newThisWeek: mockCandidates.filter(c => {
+    totalCandidates: candidateStats?.total_candidates || candidates.length,
+    activeCandidates: candidates.filter(c => !c.isBlacklisted && !c.isLeaver).length,
+    newThisWeek: candidates.filter(c => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return new Date(c.createdAt) > weekAgo;
     }).length,
-    totalApplications: mockApplications.length,
-    pendingApplications: mockApplications.filter(a => a.status === 'pending' || a.status === 'in_review').length,
-    totalClients: mockClients.length,
-    activeClients: mockClients.filter(c => c.isActive).length,
+    totalApplications: applicationStats?.total_applications || applications.length,
+    pendingApplications: applications.filter(a => a.status === 'pending' || a.status === 'in_review').length,
+    totalClients: 3, // Hardcoded until clients endpoint exists
+    activeClients: 3,
   };
 
-  const statusBreakdown = mockCandidates.reduce((acc, c) => {
-    acc[c.currentStatus] = (acc[c.currentStatus] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  // Status breakdown from API or calculated
+  const statusBreakdown = candidateStats?.by_status
+    ? Object.entries(candidateStats.by_status).reduce((acc, [status, count]) => {
+      // Map backend status to display name
+      const statusMap: Record<string, string> = {
+        'ACTIVE': 'active',
+        'INACTIVE': 'on_hold',
+        'LEFT': 'withdrawn',
+        'HIRED': 'hired',
+        'REJECTED': 'rejected',
+      };
+      acc[statusMap[status] || status] = count as number;
+      return acc;
+    }, {} as Record<string, number>)
+    : candidates.reduce((acc, c) => {
+      acc[c.currentStatus] = (acc[c.currentStatus] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const isLoading = isLoadingCandidates || isLoadingApplications;
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
 
   return (
     <DashboardLayout title="Dashboard">
@@ -89,9 +89,9 @@ export default function MonitoringPage() {
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             )}
           </div>
-          
+
           {/* Search Results */}
-          {searchResults.length > 0 && searchQuery.length >= 2 && (
+          {searchResults && searchResults.length > 0 && searchQuery.length >= 2 && (
             <div className="mt-4 border-t border-border pt-4">
               <p className="text-sm text-muted-foreground mb-3">
                 Found {searchResults.length} candidate{searchResults.length !== 1 ? 's' : ''}
@@ -136,34 +136,40 @@ export default function MonitoringPage() {
         </div>
 
         {/* Quick stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            icon={Users}
-            label="Active Candidates"
-            value={stats.activeCandidates}
-            subtext={`+${stats.newThisWeek} this week`}
-            trend="up"
-          />
-          <StatCard 
-            icon={FileText}
-            label="Applications"
-            value={stats.totalApplications}
-            subtext={`${stats.pendingApplications} pending`}
-          />
-          <StatCard 
-            icon={Building2}
-            label="Active Clients"
-            value={stats.activeClients}
-            subtext={`of ${stats.totalClients} total`}
-          />
-          <StatCard 
-            icon={Clock}
-            label="Avg. Time to Hire"
-            value="18d"
-            subtext="Last 30 days"
-            trend="down"
-          />
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              icon={Users}
+              label="Active Candidates"
+              value={stats.activeCandidates}
+              subtext={`+${stats.newThisWeek} this week`}
+              trend="up"
+            />
+            <StatCard
+              icon={FileText}
+              label="Applications"
+              value={stats.totalApplications}
+              subtext={`${stats.pendingApplications} pending`}
+            />
+            <StatCard
+              icon={Building2}
+              label="Active Clients"
+              value={stats.activeClients}
+              subtext={`of ${stats.totalClients} total`}
+            />
+            <StatCard
+              icon={Clock}
+              label="Avg. Time to Hire"
+              value="18d"
+              subtext="Last 30 days"
+              trend="down"
+            />
+          </div>
+        )}
 
         {/* Status breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -180,9 +186,9 @@ export default function MonitoringPage() {
                       <span className="text-sm capitalize">{status.replace('_', ' ')}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="h-2 bg-primary/30 rounded-full" 
-                        style={{ width: `${(count / stats.totalCandidates) * 100}px` }}
+                      <div
+                        className="h-2 bg-primary/30 rounded-full"
+                        style={{ width: `${(count / Math.max(stats.totalCandidates, 1)) * 100}px` }}
                       />
                       <span className="text-sm font-mono text-muted-foreground w-8">
                         {count}
@@ -200,34 +206,19 @@ export default function MonitoringPage() {
             </div>
             <div className="panel-body">
               <div className="space-y-4">
-                <ActivityItem
-                  icon={CheckCircle2}
-                  iconColor="text-status-success"
-                  title="Application status updated"
-                  description="Maria Garcia moved to Shortlisted for TechCorp"
-                  time="2 hours ago"
-                />
-                <ActivityItem
-                  icon={Users}
-                  iconColor="text-status-info"
-                  title="New candidate added"
-                  description="Sarah Kim added to candidate pool"
-                  time="4 hours ago"
-                />
-                <ActivityItem
-                  icon={AlertCircle}
-                  iconColor="text-status-warning"
-                  title="Duplicate flag raised"
-                  description="Emily Chen flagged as potential duplicate"
-                  time="6 hours ago"
-                />
-                <ActivityItem
-                  icon={FileText}
-                  iconColor="text-status-info"
-                  title="New application received"
-                  description="Robert Martinez applied for DevOps Lead"
-                  time="1 day ago"
-                />
+                {candidates.slice(0, 4).map((candidate, i) => (
+                  <ActivityItem
+                    key={candidate.id}
+                    icon={i === 0 ? CheckCircle2 : Users}
+                    iconColor={i === 0 ? "text-status-success" : "text-status-info"}
+                    title={i === 0 ? "Candidate updated" : "Candidate added"}
+                    description={`${candidate.name} - ${candidate.currentStatus.replace('_', ' ')}`}
+                    time={new Date(candidate.updatedAt).toLocaleDateString()}
+                  />
+                ))}
+                {candidates.length === 0 && (
+                  <p className="text-muted-foreground text-sm">No recent activity</p>
+                )}
               </div>
             </div>
           </div>
@@ -237,13 +228,13 @@ export default function MonitoringPage() {
   );
 }
 
-function StatCard({ 
-  icon: Icon, 
-  label, 
-  value, 
-  subtext, 
-  trend 
-}: { 
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  subtext,
+  trend
+}: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | number;
