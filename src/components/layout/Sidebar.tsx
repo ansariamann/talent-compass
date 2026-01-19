@@ -167,26 +167,6 @@ export function Sidebar() {
 
       {/* Bottom section */}
       <div className="p-2 border-t border-sidebar-border space-y-2">
-        {/* User profile */}
-        <div className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg",
-          isCollapsed ? "justify-center" : ""
-        )}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-xs font-medium shrink-0">
-            {userInitials}
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {user?.name || 'User'}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user?.email || 'user@example.com'}
-              </p>
-            </div>
-          )}
-        </div>
-
         <NavLink
           to="/settings"
           className={cn(
@@ -199,19 +179,6 @@ export function Sidebar() {
           <Settings className="w-5 h-5 shrink-0" />
           {!isCollapsed && <span>Settings</span>}
         </NavLink>
-
-        {/* Logout button */}
-        <button
-          onClick={handleLogout}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full transition-all duration-200",
-            "text-destructive/70 hover:text-destructive hover:bg-destructive/10",
-            isCollapsed && "justify-center"
-          )}
-        >
-          <LogOut className="w-5 h-5 shrink-0" />
-          {!isCollapsed && <span>Logout</span>}
-        </button>
 
         <Button
           variant="ghost"
