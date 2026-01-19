@@ -1,6 +1,11 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
+import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import { mockCandidates, mockApplications, mockClients } from '@/lib/mock-data';
+import { candidatesApi } from '@/lib/api';
+import { Candidate } from '@/types/ats';
 import { 
   Users, 
   FileText, 
@@ -9,9 +14,44 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 export default function MonitoringPage() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Candidate[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Try API first, fallback to mock data filter
+      try {
+        const results = await candidatesApi.search(query);
+        setSearchResults(results);
+      } catch {
+        // Fallback to local mock search
+        const filtered = mockCandidates.filter(c => 
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.email.toLowerCase().includes(query.toLowerCase()) ||
+          c.skills.some(s => s.toLowerCase().includes(query.toLowerCase())) ||
+          c.currentStatus.toLowerCase().includes(query.toLowerCase())
+        );
+        setSearchResults(filtered);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const stats = {
     totalCandidates: mockCandidates.length,
     activeCandidates: mockCandidates.filter(c => !c.isBlacklisted && !c.isLeaver).length,
@@ -32,8 +72,69 @@ export default function MonitoringPage() {
   }, {} as Record<string, number>);
 
   return (
-    <DashboardLayout title="Monitoring">
+    <DashboardLayout title="Dashboard">
       <div className="p-6 space-y-6">
+        {/* Search Section */}
+        <div className="panel p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <EnhancedSearch
+                value={searchQuery}
+                onChange={handleSearch}
+                placeholder="Search candidates by name, email, skills..."
+                className="max-w-xl"
+              />
+            </div>
+            {isSearching && (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          
+          {/* Search Results */}
+          {searchResults.length > 0 && searchQuery.length >= 2 && (
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                Found {searchResults.length} candidate{searchResults.length !== 1 ? 's' : ''}
+              </p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {searchResults.slice(0, 5).map((candidate) => (
+                  <button
+                    key={candidate.id}
+                    onClick={() => navigate('/candidates')}
+                    className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-sm font-medium">
+                        {candidate.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{candidate.name}</p>
+                        <p className="text-xs text-muted-foreground">{candidate.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {candidate.currentStatus.replace('_', ' ')}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {candidate.experience}y exp
+                      </span>
+                    </div>
+                  </button>
+                ))}
+                {searchResults.length > 5 && (
+                  <button
+                    onClick={() => navigate('/candidates')}
+                    className="w-full text-center text-sm text-primary hover:underline py-2"
+                  >
+                    View all {searchResults.length} results →
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Quick stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
