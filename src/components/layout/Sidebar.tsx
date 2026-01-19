@@ -39,7 +39,6 @@ const navItems: NavItem[] = [
   { label: 'Candidates', href: '/candidates', icon: Users },
   { label: 'Applications', href: '/applications', icon: FileText },
   { label: 'Clients', href: '/clients', icon: Building2 },
-  { label: 'Monitoring', href: '/monitoring', icon: BarChart3 },
 ];
 
 const databaseItems: DatabaseItem[] = [
@@ -74,14 +73,14 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="h-14 flex items-center px-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
+        <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
             <span className="font-semibold text-sidebar-foreground">TalentFlow</span>
           )}
-        </div>
+        </NavLink>
       </div>
 
       {/* Navigation */}

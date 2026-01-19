@@ -32,11 +32,10 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
             <Route path="/candidates" element={<ProtectedRoute><CandidatesPage /></ProtectedRoute>} />
             <Route path="/applications" element={<ProtectedRoute><ApplicationsPage /></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
-            <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
             <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
             <Route path="/database/:table" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
