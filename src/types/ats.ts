@@ -39,6 +39,7 @@ export interface Candidate {
   name: string;
   email: string;
   phone?: string;
+  location?: string;
   skills: string[];
   experience: number; // years
   currentStatus: CandidateStatus;
@@ -47,6 +48,9 @@ export interface Candidate {
   flags: CandidateFlag[];
   isBlacklisted: boolean;
   isLeaver: boolean;
+  remark?: string;
+  ctcCurrent?: number;
+  ctcExpected?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -103,6 +107,9 @@ export interface Application {
   lastActivityAt: string;
   notes: ApplicationNote[];
   auditLog: AuditEntry[];
+  isFlagged?: boolean;
+  flagReason?: string;
+  isDeleted?: boolean;
 }
 
 export interface ApplicationNote {
@@ -165,6 +172,8 @@ export interface ApplicationFilters {
   candidateId?: string;
   dateFrom?: string;
   dateTo?: string;
+  flaggedOnly?: boolean;
+  includeDeleted?: boolean;
 }
 
 // Pagination

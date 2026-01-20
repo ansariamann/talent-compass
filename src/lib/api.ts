@@ -103,6 +103,7 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     name: backend.name,
     email: backend.email || '',
     phone: backend.phone || undefined,
+    location: backend.location || undefined,
     skills: Array.isArray(skills) ? skills : [],
     experience,
     currentStatus: statusMap[backend.status] || 'new',
@@ -111,6 +112,9 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     flags: [],
     isBlacklisted: backend.status === 'REJECTED',
     isLeaver: backend.status === 'LEFT',
+    remark: backend.remark || undefined,
+    ctcCurrent: backend.ctc_current || undefined,
+    ctcExpected: backend.ctc_expected || undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
   };
@@ -136,9 +140,13 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.name !== undefined) result.name = frontend.name;
   if (frontend.email !== undefined) result.email = frontend.email;
   if (frontend.phone !== undefined) result.phone = frontend.phone;
+  if (frontend.location !== undefined) result.location = frontend.location;
   if (frontend.skills !== undefined) result.skills = { skills: frontend.skills };
   if (frontend.experience !== undefined) result.experience = { years: frontend.experience };
   if (frontend.currentStatus !== undefined) result.status = statusMap[frontend.currentStatus] || 'ACTIVE';
+  if (frontend.remark !== undefined) result.remark = frontend.remark;
+  if (frontend.ctcCurrent !== undefined) result.ctc_current = frontend.ctcCurrent;
+  if (frontend.ctcExpected !== undefined) result.ctc_expected = frontend.ctcExpected;
 
   return result;
 }
@@ -180,6 +188,9 @@ function transformApplication(backend: BackendApplication): Application {
     lastActivityAt: backend.updated_at,
     notes: [],
     auditLog: [],
+    isFlagged: backend.is_flagged,
+    flagReason: backend.flag_reason || undefined,
+    isDeleted: backend.is_deleted,
   };
 }
 
@@ -280,6 +291,12 @@ export const candidatesApi = {
     return transformCandidate(response);
   },
 
+  delete: async (id: string): Promise<void> => {
+    await fetchWithAuth<void>(`/candidates/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   search: async (query: string): Promise<Candidate[]> => {
     // Backend only has email search, so we use list with name_pattern
     const params = new URLSearchParams({
@@ -287,6 +304,16 @@ export const candidatesApi = {
       limit: '50',
     });
     const response = await fetchWithAuth<BackendCandidate[]>(`/candidates?${params}`);
+    return response.map(transformCandidate);
+  },
+
+  getByEmail: async (email: string): Promise<Candidate> => {
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/email/${encodeURIComponent(email)}`);
+    return transformCandidate(response);
+  },
+
+  findDuplicates: async (id: string): Promise<Candidate[]> => {
+    const response = await fetchWithAuth<BackendCandidate[]>(`/candidates/${id}/duplicates`);
     return response.map(transformCandidate);
   },
 
@@ -307,6 +334,8 @@ export const applicationsApi = {
     // Add filters
     if (filters.status?.length) params.set('status', filters.status[0]);
     if (filters.candidateId) params.set('candidate_id', filters.candidateId);
+    if (filters.flaggedOnly) params.set('flagged_only', 'true');
+    if (filters.includeDeleted) params.set('include_deleted', 'true');
 
     const response = await fetchWithAuth<BackendApplication[]>(`/applications?${params}`);
     return transformPaginatedResponse(response, transformApplication, page, pageSize);
@@ -314,6 +343,70 @@ export const applicationsApi = {
 
   get: async (id: string): Promise<Application> => {
     const response = await fetchWithAuth<BackendApplication>(`/applications/${id}`);
+    return transformApplication(response);
+  },
+
+  create: async (data: { candidateId: string; clientId: string; jobTitle: string }): Promise<Application> => {
+    const backendData = {
+      candidate_id: data.candidateId,
+      client_id: data.clientId,
+      job_title: data.jobTitle,
+    };
+    const response = await fetchWithAuth<BackendApplication>('/applications/', {
+      method: 'POST',
+      body: JSON.stringify(backendData),
+    });
+    return transformApplication(response);
+  },
+
+  update: async (id: string, data: { jobTitle?: string; status?: string }): Promise<Application> => {
+    const backendData: Record<string, unknown> = {};
+    if (data.jobTitle) backendData.job_title = data.jobTitle;
+    if (data.status) {
+      const statusMap: Record<string, string> = {
+        'pending': 'NEW',
+        'in_review': 'IN_REVIEW',
+        'shortlisted': 'SHORTLISTED',
+        'interview': 'INTERVIEW',
+        'offer': 'OFFER',
+        'accepted': 'ACCEPTED',
+        'declined': 'DECLINED',
+        'rejected': 'REJECTED',
+      };
+      backendData.status = statusMap[data.status] || data.status;
+    }
+    const response = await fetchWithAuth<BackendApplication>(`/applications/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(backendData),
+    });
+    return transformApplication(response);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await fetchWithAuth<void>(`/applications/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  restore: async (id: string): Promise<Application> => {
+    const response = await fetchWithAuth<BackendApplication>(`/applications/${id}/restore`, {
+      method: 'POST',
+    });
+    return transformApplication(response);
+  },
+
+  flag: async (id: string, reason?: string): Promise<Application> => {
+    const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    const response = await fetchWithAuth<BackendApplication>(`/applications/${id}/flag${params}`, {
+      method: 'POST',
+    });
+    return transformApplication(response);
+  },
+
+  unflag: async (id: string): Promise<Application> => {
+    const response = await fetchWithAuth<BackendApplication>(`/applications/${id}/unflag`, {
+      method: 'POST',
+    });
     return transformApplication(response);
   },
 
