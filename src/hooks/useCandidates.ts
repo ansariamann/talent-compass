@@ -11,6 +11,8 @@ export const candidateKeys = {
     details: () => [...candidateKeys.all, 'detail'] as const,
     detail: (id: string) => [...candidateKeys.details(), id] as const,
     statistics: () => [...candidateKeys.all, 'statistics'] as const,
+    duplicates: (id: string) => [...candidateKeys.all, 'duplicates', id] as const,
+    byEmail: (email: string) => [...candidateKeys.all, 'email', email] as const,
 };
 
 // List candidates with pagination and filters
@@ -42,6 +44,27 @@ export function useCandidateSearch(query: string) {
         queryFn: () => candidatesApi.search(query),
         enabled: query.length >= 2,
         staleTime: 1000 * 30, // 30 seconds
+    });
+}
+
+// Get candidate by email
+export function useCandidateByEmail(email: string) {
+    return useQuery<Candidate, Error>({
+        queryKey: candidateKeys.byEmail(email),
+        queryFn: () => candidatesApi.getByEmail(email),
+        enabled: email.length > 0 && email.includes('@'),
+        staleTime: 1000 * 60 * 5,
+        retry: false,
+    });
+}
+
+// Find duplicate candidates
+export function useCandidateDuplicates(id: string | undefined) {
+    return useQuery<Candidate[], Error>({
+        queryKey: candidateKeys.duplicates(id!),
+        queryFn: () => candidatesApi.findDuplicates(id!),
+        enabled: !!id,
+        staleTime: 1000 * 60 * 5,
     });
 }
 
@@ -81,6 +104,22 @@ export function useCreateCandidate() {
         mutationFn: (data: Partial<Candidate>) => candidatesApi.create(data),
         onSuccess: () => {
             // Invalidate list queries to refetch with new candidate
+            queryClient.invalidateQueries({ queryKey: candidateKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: candidateKeys.statistics() });
+        },
+    });
+}
+
+// Delete candidate mutation
+export function useDeleteCandidate() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => candidatesApi.delete(id),
+        onSuccess: (_, id) => {
+            // Remove from cache
+            queryClient.removeQueries({ queryKey: candidateKeys.detail(id) });
+            // Invalidate list queries to refetch
             queryClient.invalidateQueries({ queryKey: candidateKeys.lists() });
             queryClient.invalidateQueries({ queryKey: candidateKeys.statistics() });
         },

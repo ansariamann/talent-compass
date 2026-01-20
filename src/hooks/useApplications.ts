@@ -54,6 +54,101 @@ export function useApplicationStatistics() {
     });
 }
 
+// Create application mutation
+export function useCreateApplication() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data: { candidateId: string; clientId: string; jobTitle: string }) =>
+            applicationsApi.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: applicationKeys.statistics() });
+        },
+    });
+}
+
+// Update application mutation
+export function useUpdateApplication() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: { jobTitle?: string; status?: string } }) =>
+            applicationsApi.update(id, data),
+        onSuccess: (updatedApplication) => {
+            queryClient.setQueryData(
+                applicationKeys.detail(updatedApplication.id),
+                updatedApplication
+            );
+            queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+        },
+    });
+}
+
+// Delete application mutation
+export function useDeleteApplication() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => applicationsApi.delete(id),
+        onSuccess: (_, id) => {
+            queryClient.removeQueries({ queryKey: applicationKeys.detail(id) });
+            queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: applicationKeys.statistics() });
+        },
+    });
+}
+
+// Restore application mutation
+export function useRestoreApplication() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => applicationsApi.restore(id),
+        onSuccess: (updatedApplication) => {
+            queryClient.setQueryData(
+                applicationKeys.detail(updatedApplication.id),
+                updatedApplication
+            );
+            queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: applicationKeys.statistics() });
+        },
+    });
+}
+
+// Flag application mutation
+export function useFlagApplication() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+            applicationsApi.flag(id, reason),
+        onSuccess: (updatedApplication) => {
+            queryClient.setQueryData(
+                applicationKeys.detail(updatedApplication.id),
+                updatedApplication
+            );
+            queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+        },
+    });
+}
+
+// Unflag application mutation
+export function useUnflagApplication() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => applicationsApi.unflag(id),
+        onSuccess: (updatedApplication) => {
+            queryClient.setQueryData(
+                applicationKeys.detail(updatedApplication.id),
+                updatedApplication
+            );
+            queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+        },
+    });
+}
+
 // Update application status mutation
 export function useUpdateApplicationStatus() {
     const queryClient = useQueryClient();
