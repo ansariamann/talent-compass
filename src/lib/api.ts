@@ -456,7 +456,7 @@ export const applicationsApi = {
   }>('/applications/statistics'),
 };
 
-// Clients - Note: Backend may not have this endpoint yet
+// Clients API
 export const clientsApi = {
   list: async (): Promise<Client[]> => {
     try {
@@ -470,6 +470,28 @@ export const clientsApi = {
   },
   get: async (id: string): Promise<Client> => {
     return fetchWithAuth<Client>(`/clients/${id}`);
+  },
+  create: async (data: Partial<Client>): Promise<Client> => {
+    return fetchWithAuth<Client>('/clients', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id: string, data: Partial<Client>): Promise<Client> => {
+    return fetchWithAuth<Client>(`/clients/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: string): Promise<void> => {
+    await fetchWithAuth<void>(`/clients/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  sendInvite: async (id: string): Promise<{ token: string; link: string }> => {
+    return fetchWithAuth<{ token: string; link: string }>(`/clients/${id}/invite`, {
+      method: 'POST',
+    });
   },
 };
 

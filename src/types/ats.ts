@@ -91,8 +91,16 @@ export interface Client {
   industry: string;
   contactEmail: string;
   contactName: string;
+  contactPhone?: string;
+  address?: string;
+  website?: string;
   isActive: boolean;
+  isRegistered: boolean;
+  registrationToken?: string;
+  registrationSentAt?: string;
+  registeredAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Application {
