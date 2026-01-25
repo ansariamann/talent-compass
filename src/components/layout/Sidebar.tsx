@@ -67,24 +67,27 @@ export function Sidebar() {
   return (
     <aside 
       className={cn(
-        "flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
+        "flex flex-col h-screen transition-all duration-300 relative",
+        "bg-gradient-to-b from-background/80 via-background/60 to-background/80",
+        "backdrop-blur-xl border-r border-white/10",
+        "before:absolute before:inset-0 before:bg-gradient-to-b before:from-primary/5 before:via-transparent before:to-vibrant-purple/5 before:pointer-events-none",
         isCollapsed ? "w-16" : "w-60"
       )}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center px-4 border-b border-sidebar-border">
-        <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+      <div className="h-14 flex items-center px-4 border-b border-white/10 relative z-10">
+        <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-vibrant-purple flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-shadow">
             <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
-            <span className="font-semibold text-sidebar-foreground">TalentFlow</span>
+            <span className="font-semibold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">TalentFlow</span>
           )}
         </NavLink>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto relative z-10">
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -94,16 +97,22 @@ export function Sidebar() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
                 isActive 
-                  ? "bg-sidebar-accent text-sidebar-primary" 
-                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  ? "bg-white/10 text-foreground shadow-lg shadow-primary/10 backdrop-blur-sm border border-white/20" 
+                  : "text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm"
               )}
             >
-              <Icon className={cn("w-5 h-5 shrink-0", isActive && "text-sidebar-primary")} />
-              {!isCollapsed && <span>{item.label}</span>}
+              {isActive && (
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
+              )}
+              <Icon className={cn(
+                "w-5 h-5 shrink-0 relative z-10 transition-colors", 
+                isActive ? "text-primary" : "group-hover:text-primary/80"
+              )} />
+              {!isCollapsed && <span className="relative z-10">{item.label}</span>}
               {!isCollapsed && item.badge && (
-                <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full relative z-10 backdrop-blur-sm">
                   {item.badge}
                 </span>
               )}
@@ -115,7 +124,7 @@ export function Sidebar() {
         {!isCollapsed ? (
           <Collapsible open={isDatabaseOpen} onOpenChange={setIsDatabaseOpen} className="mt-4">
             <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200">
+              <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm transition-all duration-200">
                 <Database className="w-5 h-5 shrink-0" />
                 <span>Master Database</span>
                 <ChevronRight className={cn(
@@ -132,16 +141,22 @@ export function Sidebar() {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative group",
                       isActive 
-                        ? "bg-sidebar-accent text-sidebar-primary" 
-                        : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20" 
+                        : "text-foreground/60 hover:text-foreground hover:bg-white/5"
                     )}
                   >
-                    <Table2 className="w-4 h-4 shrink-0" />
-                    <span>{item.label}</span>
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-vibrant-purple/10 opacity-50" />
+                    )}
+                    <Table2 className={cn(
+                      "w-4 h-4 shrink-0 relative z-10",
+                      isActive && "text-primary"
+                    )} />
+                    <span className="relative z-10">{item.label}</span>
                     {item.count !== undefined && (
-                      <span className="ml-auto text-xs text-muted-foreground font-mono">
+                      <span className="ml-auto text-xs text-muted-foreground font-mono relative z-10">
                         {item.count.toLocaleString()}
                       </span>
                     )}
@@ -156,8 +171,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               location.pathname.startsWith('/database')
-                ? "bg-sidebar-accent text-sidebar-primary" 
-                : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20" 
+                : "text-foreground/70 hover:text-foreground hover:bg-white/5"
             )}
           >
             <Database className="w-5 h-5" />
@@ -166,25 +181,31 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="p-2 border-t border-sidebar-border space-y-2">
+      <div className="p-2 border-t border-white/10 space-y-2 relative z-10">
         <NavLink
           to="/settings"
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
             location.pathname === '/settings'
-              ? "bg-sidebar-accent text-sidebar-primary"
-              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
+              : "text-foreground/70 hover:text-foreground hover:bg-white/5"
           )}
         >
-          <Settings className="w-5 h-5 shrink-0" />
-          {!isCollapsed && <span>Settings</span>}
+          {location.pathname === '/settings' && (
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
+          )}
+          <Settings className={cn(
+            "w-5 h-5 shrink-0 relative z-10",
+            location.pathname === '/settings' && "text-primary"
+          )} />
+          {!isCollapsed && <span className="relative z-10">Settings</span>}
         </NavLink>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full mt-2 justify-center text-muted-foreground hover:text-foreground"
+          className="w-full mt-2 justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 backdrop-blur-sm"
         >
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4" />
