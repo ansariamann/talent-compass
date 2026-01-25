@@ -26,6 +26,8 @@ export const mockClients: Client[] = [
     contactEmail: 'hr@techcorp.com',
     contactName: 'John Smith',
     isActive: true,
+    isRegistered: true,
+    registeredAt: '2024-01-15T00:00:00Z',
     createdAt: '2024-01-01T00:00:00Z',
   },
   {
@@ -35,6 +37,9 @@ export const mockClients: Client[] = [
     contactEmail: 'talent@financefirst.com',
     contactName: 'Emma Wilson',
     isActive: true,
+    isRegistered: false,
+    registrationToken: 'reg_abc123',
+    registrationSentAt: '2024-02-20T00:00:00Z',
     createdAt: '2024-02-15T00:00:00Z',
   },
   {
@@ -44,6 +49,7 @@ export const mockClients: Client[] = [
     contactEmail: 'recruitment@healthplus.io',
     contactName: 'Michael Brown',
     isActive: true,
+    isRegistered: false,
     createdAt: '2024-03-01T00:00:00Z',
   },
 ];
