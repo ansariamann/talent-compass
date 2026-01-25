@@ -73,6 +73,14 @@ export default {
           elevated: "hsl(var(--surface-elevated))",
           overlay: "hsl(var(--surface-overlay))",
         },
+        vibrant: {
+          purple: "hsl(280 100% 70%)",
+          blue: "hsl(200 100% 50%)",
+          pink: "hsl(330 100% 65%)",
+          cyan: "hsl(180 100% 50%)",
+          green: "hsl(160 85% 45%)",
+          yellow: "hsl(45 100% 55%)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -84,6 +92,13 @@ export default {
         'md': 'var(--shadow-md)',
         'lg': 'var(--shadow-lg)',
         'glow': 'var(--shadow-glow)',
+        'glow-accent': 'var(--shadow-glow-accent)',
+        'glow-sm': '0 0 15px hsl(280 100% 70% / 0.3)',
+        'glow-lg': '0 0 50px hsl(280 100% 70% / 0.4), 0 0 80px hsl(200 100% 50% / 0.2)',
+      },
+      backdropBlur: {
+        'glass': '20px',
+        'glass-strong': '30px',
       },
       keyframes: {
         "accordion-down": {
