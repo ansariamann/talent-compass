@@ -57,7 +57,6 @@ export function ResumeJobsList() {
         switch (status) {
             case "COMPLETED":
                 return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
-            case "Processing": // Case sensitivity might vary, backend usually uses uppercase
             case "PROCESSING":
                 return <Badge className="bg-blue-500 hover:bg-blue-600 animate-pulse">Processing</Badge>;
             case "FAILED":
