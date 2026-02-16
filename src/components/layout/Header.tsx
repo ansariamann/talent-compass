@@ -93,9 +93,9 @@ export function Header({ title, isConnected = true, onSearch, searchComponent }:
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/settings')}>
                 <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                <span>Profile & Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
