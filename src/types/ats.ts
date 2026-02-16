@@ -1,6 +1,6 @@
 // Core domain types for the ATS system
 
-export type CandidateStatus = 
+export type CandidateStatus =
   | 'new'
   | 'screening'
   | 'submitted'
@@ -12,7 +12,7 @@ export type CandidateStatus =
   | 'withdrawn'
   | 'on_hold';
 
-export type ApplicationStatus = 
+export type ApplicationStatus =
   | 'pending'
   | 'in_review'
   | 'shortlisted'
@@ -214,4 +214,60 @@ export interface CopilotResponse {
   sources: string[];
   confidence: number;
   generatedAt: string;
+}
+
+// Email Ingestion & Resume Parsing
+export type ResumeJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface ResumeJob {
+  id: string;
+  client_id: string;
+  candidate_id?: string;
+  status: ResumeJobStatus;
+  resume_text?: string;
+  resume_file_path?: string;
+  parsed_data?: Record<string, unknown>;
+  error_message?: string;
+  attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailAttachment {
+  filename: string;
+  content_type: string;
+  content_base64: string;
+  size: number;
+}
+
+export interface EmailIngestionRequest {
+  client_id: string;
+  email: {
+    message_id: string;
+    sender: string;
+    subject: string;
+    body: string;
+    received_at: string;
+    attachments: EmailAttachment[];
+  };
+}
+
+export interface IngestionResponse {
+  success: boolean;
+  message: string;
+  job_ids: string[];
+}
+
+export interface ParseJobResponse {
+  success: boolean;
+  data?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    skills?: string[];
+    experience_years?: number;
+    raw_text_summary?: string;
+    [key: string]: unknown;
+  };
 }

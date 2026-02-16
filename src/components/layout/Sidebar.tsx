@@ -1,9 +1,9 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  FileText, 
-  Building2, 
-  BarChart3, 
+import {
+  Users,
+  FileText,
+  Building2,
+  BarChart3,
   Settings,
   Sparkles,
   ChevronLeft,
@@ -38,6 +38,7 @@ interface DatabaseItem {
 const navItems: NavItem[] = [
   { label: 'Candidates', href: '/candidates', icon: Users },
   { label: 'Applications', href: '/applications', icon: FileText },
+  { label: 'Processing', href: '/resume-processing', icon: FileText }, // Using FileText for now, or maybe Mail/Inbox
   { label: 'Clients', href: '/clients', icon: Building2 },
 ];
 
@@ -65,7 +66,7 @@ export function Sidebar() {
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() || 'U';
   return (
-    <aside 
+    <aside
       className={cn(
         "flex flex-col h-screen transition-all duration-300 relative",
         "bg-gradient-to-b from-background/80 via-background/60 to-background/80",
@@ -91,15 +92,15 @@ export function Sidebar() {
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           const Icon = item.icon;
-          
+
           return (
             <NavLink
               key={item.href}
               to={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
-                isActive 
-                  ? "bg-white/10 text-foreground shadow-lg shadow-primary/10 backdrop-blur-sm border border-white/20" 
+                isActive
+                  ? "bg-white/10 text-foreground shadow-lg shadow-primary/10 backdrop-blur-sm border border-white/20"
                   : "text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm"
               )}
             >
@@ -107,7 +108,7 @@ export function Sidebar() {
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
               )}
               <Icon className={cn(
-                "w-5 h-5 shrink-0 relative z-10 transition-colors", 
+                "w-5 h-5 shrink-0 relative z-10 transition-colors",
                 isActive ? "text-primary" : "group-hover:text-primary/80"
               )} />
               {!isCollapsed && <span className="relative z-10">{item.label}</span>}
@@ -142,8 +143,8 @@ export function Sidebar() {
                     to={item.href}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative group",
-                      isActive 
-                        ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20" 
+                      isActive
+                        ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
                         : "text-foreground/60 hover:text-foreground hover:bg-white/5"
                     )}
                   >
@@ -171,7 +172,7 @@ export function Sidebar() {
             className={cn(
               "flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               location.pathname.startsWith('/database')
-                ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20" 
+                ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
                 : "text-foreground/70 hover:text-foreground hover:bg-white/5"
             )}
           >

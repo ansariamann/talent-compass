@@ -11,9 +11,13 @@ import type {
   CopilotQuery,
   CopilotResponse,
   User,
+  ResumeJob,
+  EmailIngestionRequest,
+  IngestionResponse,
+  ParseJobResponse,
 } from '@/types/ats';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Get token from localStorage
 const getToken = () => localStorage.getItem('auth_token');
@@ -454,6 +458,43 @@ export const applicationsApi = {
     flagged_count: number;
     deleted_count: number;
   }>('/applications/statistics'),
+};
+
+// Email Ingestion & Resume Parsing
+export const emailApi = {
+  ingest: async (data: EmailIngestionRequest): Promise<IngestionResponse> => {
+    return fetchWithAuth<IngestionResponse>('/email/ingest', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getJobs: async (status?: string, page = 1, pageSize = 25): Promise<PaginatedResponse<ResumeJob>> => {
+    const params = new URLSearchParams({
+      skip: String((page - 1) * pageSize),
+      limit: String(pageSize),
+    });
+    if (status) params.set('status', status);
+
+    const response = await fetchWithAuth<ResumeJob[]>(`/email/jobs?${params}`);
+    return transformPaginatedResponse(response, (job) => job, page, pageSize);
+  },
+
+  getJob: async (id: string): Promise<ResumeJob> => {
+    return fetchWithAuth<ResumeJob>(`/email/jobs/${id}`);
+  },
+
+  parseJob: async (id: string): Promise<ParseJobResponse> => {
+    return fetchWithAuth<ParseJobResponse>(`/email/jobs/${id}/parse`, {
+      method: 'POST',
+    });
+  },
+
+  retryJob: async (id: string): Promise<ResumeJob> => {
+    return fetchWithAuth<ResumeJob>(`/email/jobs/${id}/retry`, {
+      method: 'POST',
+    });
+  }
 };
 
 // Clients API
