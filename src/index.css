@@ -305,7 +305,25 @@
 
   .btn-vibrant:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 40px hsl(280 100% 70% / 0.5);
+    box-shadow: 0 0 40px hsl(280 100% 70% / 0.5), 0 0 80px hsl(200 100% 50% / 0.2);
+    filter: brightness(1.1);
+  }
+
+  .btn-vibrant:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-glow);
+    filter: brightness(0.95);
+  }
+
+  /* Interactive card with glow on hover */
+  .card-interactive {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-interactive:hover {
+    box-shadow: 0 8px 32px hsl(0 0% 0% / 0.4), 0 0 30px hsl(280 100% 70% / 0.12);
+    border-color: hsl(280 100% 70% / 0.25);
+    transform: translateY(-2px);
   }
 
   /* Animated gradient border */
@@ -326,6 +344,32 @@
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .gradient-border:hover::before {
+    opacity: 1;
+  }
+
+  /* Table row hover glow */
+  .data-table tr {
+    @apply transition-all duration-200;
+  }
+
+  .data-table tr:hover td {
+    background: hsl(280 100% 70% / 0.06);
+    box-shadow: inset 0 0 40px hsl(280 100% 70% / 0.04);
+  }
+
+  /* Icon button glow pulse on hover */
+  .icon-glow {
+    transition: all 0.2s ease;
+  }
+
+  .icon-glow:hover {
+    filter: drop-shadow(0 0 6px hsl(280 100% 70% / 0.5));
+    color: hsl(280 100% 70%);
   }
 }
 

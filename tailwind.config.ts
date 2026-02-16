@@ -93,8 +93,10 @@ export default {
         'lg': 'var(--shadow-lg)',
         'glow': 'var(--shadow-glow)',
         'glow-accent': 'var(--shadow-glow-accent)',
-        'glow-sm': '0 0 15px hsl(280 100% 70% / 0.3)',
+        'glow-sm': '0 0 15px hsl(280 100% 70% / 0.25), 0 0 5px hsl(280 100% 70% / 0.15)',
         'glow-lg': '0 0 50px hsl(280 100% 70% / 0.4), 0 0 80px hsl(200 100% 50% / 0.2)',
+        'glow-blue': '0 0 15px hsl(200 100% 50% / 0.3)',
+        'glow-pink': '0 0 15px hsl(330 100% 65% / 0.3)',
       },
       backdropBlur: {
         'glass': '20px',
