@@ -186,7 +186,7 @@ export function ResumeUploadDialog({
                         {
                             filename: file.name,
                             content_type: file.type || 'application/pdf',
-                            content: base64Content,
+                            content_base64: base64Content,
                             size: file.size,
                         },
                     ],
