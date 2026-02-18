@@ -34,7 +34,7 @@ export function ResumeJobsList() {
             setJobs(response.data);
         } catch (err) {
             console.error("Failed to fetch jobs:", err);
-            setError("Failed to load resume processing jobs.");
+            setError("Backend unavailable — showing offline state.");
         } finally {
             setLoading(false);
         }
@@ -43,11 +43,13 @@ export function ResumeJobsList() {
     useEffect(() => {
         fetchJobs();
 
-        // Auto-refresh every 10 seconds if there are pending/processing jobs
+        // Only auto-refresh if the last fetch succeeded (no error)
         const interval = setInterval(() => {
-            // Simple check: if any job is not completed/failed, refresh
-            // For a more robust solution, we'd check the state of the *current* jobs list
-            fetchJobs();
+            setJobs(prev => {
+                const hasPending = prev.some(j => j.status === 'PENDING' || j.status === 'PROCESSING');
+                if (hasPending) fetchJobs();
+                return prev;
+            });
         }, 10000);
 
         return () => clearInterval(interval);
@@ -56,9 +58,9 @@ export function ResumeJobsList() {
     const getStatusBadge = (status: ResumeJob["status"]) => {
         switch (status) {
             case "COMPLETED":
-                return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
+                return <Badge className="bg-status-success hover:bg-status-success/90 text-white">Completed</Badge>;
             case "PROCESSING":
-                return <Badge className="bg-blue-500 hover:bg-blue-600 animate-pulse">Processing</Badge>;
+                return <Badge className="bg-status-info hover:bg-status-info/90 text-white animate-pulse">Processing</Badge>;
             case "FAILED":
                 return <Badge variant="destructive">Failed</Badge>;
             default:
@@ -83,16 +85,21 @@ export function ResumeJobsList() {
                 </div>
             </CardHeader>
             <CardContent>
-                {error && (
-                    <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900/30 dark:text-red-400 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" />
-                        {error}
+                {error ? (
+                    <div className="text-center py-10 space-y-3">
+                        <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                            No connection to backend — jobs will appear here once the service is reachable.
+                        </p>
+                        <Button variant="outline" size="sm" onClick={fetchJobs} disabled={loading}>
+                            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                            Retry
+                        </Button>
                     </div>
-                )}
-
-                {jobs.length === 0 && !loading && !error ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                        No resume processing jobs found.
+                ) : jobs.length === 0 && !loading ? (
+                    <div className="text-center py-8 text-muted-foreground flex flex-col items-center gap-2">
+                        <FileText className="w-7 h-7 opacity-40" />
+                        <p className="text-sm">No resume processing jobs found.</p>
                     </div>
                 ) : (
                     <Table>
@@ -122,7 +129,7 @@ export function ResumeJobsList() {
                                                 {job.error_message}
                                             </span>
                                         ) : job.parsed_data ? (
-                                            <div className="flex items-center text-green-600 dark:text-green-400 text-sm gap-1">
+                                            <div className="flex items-center text-status-success text-sm gap-1">
                                                 <CheckCircle className="w-3 h-3" />
                                                 Parsed
                                             </div>
