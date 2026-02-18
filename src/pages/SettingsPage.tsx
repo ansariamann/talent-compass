@@ -1,109 +1,70 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
-  User,
-  Lock,
-  Settings,
-  Mail,
-  Phone,
-  MapPin,
-  Shield,
-  Bell,
-  Moon,
-  Globe,
-  Save,
-  Eye,
-  EyeOff,
-  Briefcase,
-  CheckCircle2,
+  User, Lock, Settings, Mail, Phone, MapPin,
+  Shield, Bell, Moon, Globe, Save, Eye, EyeOff,
+  Briefcase, CheckCircle2,
 } from 'lucide-react';
 
 const SettingsPage = () => {
   const { user } = useAuth();
 
-  // Profile state
-  const [profileName, setProfileName] = useState(user?.name || '');
-  const [profileEmail, setProfileEmail] = useState(user?.email || '');
-  const [profilePhone, setProfilePhone] = useState('');
+  const [profileName,     setProfileName]     = useState(user?.name  || '');
+  const [profileEmail,    setProfileEmail]    = useState(user?.email || '');
+  const [profilePhone,    setProfilePhone]    = useState('');
   const [profileLocation, setProfileLocation] = useState('');
-  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaving,   setProfileSaving]   = useState(false);
 
-  // Password state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [currentPassword,      setCurrentPassword]      = useState('');
+  const [newPassword,          setNewPassword]          = useState('');
+  const [confirmPassword,      setConfirmPassword]      = useState('');
+  const [showCurrentPassword,  setShowCurrentPassword]  = useState(false);
+  const [showNewPassword,      setShowNewPassword]      = useState(false);
+  const [passwordSaving,       setPasswordSaving]       = useState(false);
 
-  // System config state
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [language, setLanguage] = useState('en');
-  const [configSaving, setConfigSaving] = useState(false);
+  const [pushNotifications,  setPushNotifications]  = useState(false);
+  const [darkMode,           setDarkMode]           = useState(true);
+  const [autoRefresh,        setAutoRefresh]        = useState(true);
+  const [language,           setLanguage]           = useState('en');
+  const [configSaving,       setConfigSaving]       = useState(false);
 
   const handleProfileSave = async () => {
     setProfileSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(r => setTimeout(r, 800));
       toast.success('Profile updated successfully');
-    } catch {
-      toast.error('Failed to update profile');
-    } finally {
-      setProfileSaving(false);
-    }
+    } catch { toast.error('Failed to update profile'); }
+    finally  { setProfileSaving(false); }
   };
 
   const handlePasswordChange = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('Please fill in all password fields');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
-    }
-
+    if (!currentPassword || !newPassword || !confirmPassword) { toast.error('Please fill in all password fields'); return; }
+    if (newPassword !== confirmPassword) { toast.error('New passwords do not match'); return; }
+    if (newPassword.length < 8)          { toast.error('Password must be at least 8 characters'); return; }
     setPasswordSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(r => setTimeout(r, 800));
       toast.success('Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch {
-      toast.error('Failed to change password');
-    } finally {
-      setPasswordSaving(false);
-    }
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    } catch { toast.error('Failed to change password'); }
+    finally  { setPasswordSaving(false); }
   };
 
   const handleConfigSave = async () => {
     setConfigSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(r => setTimeout(r, 800));
       toast.success('Settings saved successfully');
-    } catch {
-      toast.error('Failed to save settings');
-    } finally {
-      setConfigSaving(false);
-    }
+    } catch { toast.error('Failed to save settings'); }
+    finally  { setConfigSaving(false); }
   };
 
   const userInitials = user?.name
@@ -111,135 +72,115 @@ const SettingsPage = () => {
     : 'U';
 
   const roleLabel: Record<string, string> = {
-    hr_admin: 'HR Administrator',
+    hr_admin:     'HR Administrator',
     hr_recruiter: 'HR Recruiter',
     client_admin: 'Client Admin',
-    client_user: 'Client User',
+    client_user:  'Client User',
   };
 
+  const Spinner = () => (
+    <span className="w-3.5 h-3.5 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+  );
+
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6 animate-fade-in">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold gradient-text">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage your profile, security, and application preferences
-        </p>
+    <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-8 animate-fade-in">
+
+      {/* ── Page header ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-4 pb-4 border-b border-border">
+        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Settings className="w-6 h-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-[22px] font-semibold text-foreground tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Profile, security, and preferences</p>
+        </div>
       </div>
 
+      {/* ── Tabs ────────────────────────────────────────────────────── */}
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="glass border border-border/50 p-1">
-          <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-            <User className="w-4 h-4" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-            <Lock className="w-4 h-4" />
-            Security
-          </TabsTrigger>
-          <TabsTrigger value="system" className="gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-            <Settings className="w-4 h-4" />
-            System
-          </TabsTrigger>
+        <TabsList className="bg-secondary border border-border p-1 rounded-xl h-auto gap-1">
+          {[
+            { value: 'profile',  label: 'Profile',  icon: User     },
+            { value: 'security', label: 'Security', icon: Lock     },
+            { value: 'system',   label: 'System',   icon: Settings },
+          ].map(({ value, label, icon: Icon }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="rounded-lg gap-2 text-[13px] px-4 py-1.5
+                         text-muted-foreground
+                         data-[state=active]:bg-background
+                         data-[state=active]:shadow-sm
+                         data-[state=active]:text-foreground
+                         data-[state=active]:font-medium"
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        {/* ============ PROFILE TAB ============ */}
-        <TabsContent value="profile" className="space-y-6">
-          {/* User card */}
-          <Card className="glass border-border/50 overflow-hidden">
-            <div className="h-20 w-full" style={{ background: 'var(--gradient-primary)', opacity: 0.3 }} />
-            <div className="px-6 pb-6 -mt-10 flex items-end gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-lg ring-4 ring-background">
-                {userInitials}
-              </div>
-              <div className="pb-1">
-                <h2 className="text-lg font-semibold">{user?.name || 'User'}</h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Badge variant="secondary" className="text-xs">
-                    <Shield className="w-3 h-3 mr-1" />
-                    {roleLabel[user?.role || ''] || user?.role || 'User'}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    <Briefcase className="w-3 h-3 mr-1" />
-                    {user?.tenantId || 'Default Org'}
-                  </Badge>
+        {/* ══ PROFILE ════════════════════════════════════════════════ */}
+        <TabsContent value="profile" className="space-y-5">
+
+          {/* Identity card */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-[22px] font-semibold text-primary shrink-0 ring-1 ring-border">
+                  {userInitials}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-[17px] font-semibold text-foreground truncate">{user?.name || 'User'}</h2>
+                  <p className="text-sm text-muted-foreground truncate mt-0.5">{user?.email}</p>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      <Shield className="w-3 h-3" />
+                      {roleLabel[user?.role || ''] || user?.role || 'User'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border">
+                      <Briefcase className="w-3 h-3" />
+                      {user?.tenantId || 'Default Org'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
 
-          {/* Profile form */}
-          <Card className="glass border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base">Personal Information</CardTitle>
-              <CardDescription>Update your personal details and contact information</CardDescription>
+          {/* Personal info */}
+          <Card>
+            <CardHeader className="pt-5 pb-3 px-5">
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Personal Information
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="px-5 pb-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="profile-name" className="flex items-center gap-1.5 text-sm">
-                    <User className="w-3.5 h-3.5 text-muted-foreground" /> Full Name
-                  </Label>
-                  <Input
-                    id="profile-name"
-                    value={profileName}
-                    onChange={e => setProfileName(e.target.value)}
-                    placeholder="Your full name"
-                    className="glass border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-email" className="flex items-center gap-1.5 text-sm">
-                    <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email
-                  </Label>
-                  <Input
-                    id="profile-email"
-                    type="email"
-                    value={profileEmail}
-                    onChange={e => setProfileEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="glass border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-phone" className="flex items-center gap-1.5 text-sm">
-                    <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone
-                  </Label>
-                  <Input
-                    id="profile-phone"
-                    value={profilePhone}
-                    onChange={e => setProfilePhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="glass border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-location" className="flex items-center gap-1.5 text-sm">
-                    <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Location
-                  </Label>
-                  <Input
-                    id="profile-location"
-                    value={profileLocation}
-                    onChange={e => setProfileLocation(e.target.value)}
-                    placeholder="City, Country"
-                    className="glass border-border/50"
-                  />
-                </div>
+                {([
+                  { id: 'profile-name',     icon: User,   label: 'Full Name', value: profileName,     setter: setProfileName,     type: 'text',  placeholder: 'Your full name'    },
+                  { id: 'profile-email',    icon: Mail,   label: 'Email',     value: profileEmail,    setter: setProfileEmail,    type: 'email', placeholder: 'your@email.com'    },
+                  { id: 'profile-phone',    icon: Phone,  label: 'Phone',     value: profilePhone,    setter: setProfilePhone,    type: 'text',  placeholder: '+91 98765 43210'   },
+                  { id: 'profile-location', icon: MapPin, label: 'Location',  value: profileLocation, setter: setProfileLocation, type: 'text',  placeholder: 'City, Country'     },
+                ] as const).map(({ id, icon: Icon, label, value, setter, type, placeholder }) => (
+                  <div key={id} className="space-y-1.5">
+                    <Label htmlFor={id} className="flex items-center gap-1.5 text-[13px] text-muted-foreground font-normal">
+                      <Icon className="w-3.5 h-3.5" /> {label}
+                    </Label>
+                    <Input
+                      id={id}
+                      type={type}
+                      value={value}
+                      onChange={e => setter(e.target.value)}
+                      placeholder={placeholder}
+                      className="h-9 text-[14px] bg-secondary border-border/70 focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                  </div>
+                ))}
               </div>
-
-              <Separator className="bg-border/50" />
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleProfileSave}
-                  disabled={profileSaving}
-                  className="btn-vibrant gap-2"
-                >
-                  {profileSaving ? (
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
+              <div className="flex justify-end pt-1">
+                <Button onClick={handleProfileSave} disabled={profileSaving} className="gap-2 h-9">
+                  {profileSaving ? <Spinner /> : <Save className="w-3.5 h-3.5" />}
                   Save Profile
                 </Button>
               </div>
@@ -247,103 +188,92 @@ const SettingsPage = () => {
           </Card>
         </TabsContent>
 
-        {/* ============ SECURITY TAB ============ */}
-        <TabsContent value="security" className="space-y-6">
-          <Card className="glass border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Lock className="w-4 h-4 text-primary" />
+        {/* ══ SECURITY ═══════════════════════════════════════════════ */}
+        <TabsContent value="security" className="space-y-5">
+
+          <Card>
+            <CardHeader className="pt-5 pb-3 px-5">
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Change Password
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-[13px]">
                 Update your password to keep your account secure
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-4 max-w-md">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password" className="text-sm">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="current-password"
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={e => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                      className="glass border-border/50 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+            <CardContent className="px-5 pb-5 space-y-4 max-w-md">
 
-                <div className="space-y-2">
-                  <Label htmlFor="new-password" className="text-sm">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="new-password"
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      className="glass border-border/50 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {newPassword && (
-                    <div className="flex items-center gap-2 text-xs mt-1">
-                      {newPassword.length >= 8 ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[hsl(var(--status-success))]" />
-                      ) : (
-                        <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/50" />
-                      )}
-                      <span className={newPassword.length >= 8 ? 'text-[hsl(var(--status-success))]' : 'text-muted-foreground'}>
-                        At least 8 characters
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password" className="text-sm">Confirm New Password</Label>
+              {/* Current password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="current-password" className="text-[13px] text-muted-foreground font-normal">Current Password</Label>
+                <div className="relative">
                   <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    className="glass border-border/50"
+                    id="current-password"
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="h-9 text-[14px] bg-secondary border-border/70 focus-visible:ring-1 focus-visible:ring-primary pr-10"
                   />
-                  {confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-xs text-destructive mt-1">Passwords do not match</p>
-                  )}
+                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
-              <Separator className="bg-border/50" />
+              {/* New password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="new-password" className="text-[13px] text-muted-foreground font-normal">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="h-9 text-[14px] bg-secondary border-border/70 focus-visible:ring-1 focus-visible:ring-primary pr-10"
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {newPassword && (
+                  <div className="flex items-center gap-1.5 text-[12px]">
+                    {newPassword.length >= 8
+                      ? <CheckCircle2 className="w-3.5 h-3.5 text-status-success" />
+                      : <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/40" />
+                    }
+                    <span className={newPassword.length >= 8 ? 'text-status-success' : 'text-muted-foreground'}>
+                      At least 8 characters
+                    </span>
+                  </div>
+                )}
+              </div>
 
-              <div className="flex justify-end">
+              {/* Confirm password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-password" className="text-[13px] text-muted-foreground font-normal">Confirm New Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="h-9 text-[14px] bg-secondary border-border/70 focus-visible:ring-1 focus-visible:ring-primary"
+                />
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-[12px] text-destructive">Passwords do not match</p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-1">
                 <Button
                   onClick={handlePasswordChange}
                   disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
-                  className="btn-vibrant gap-2"
+                  className="gap-2 h-9"
                 >
-                  {passwordSaving ? (
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Lock className="w-4 h-4" />
-                  )}
+                  {passwordSaving ? <Spinner /> : <Lock className="w-3.5 h-3.5" />}
                   Update Password
                 </Button>
               </div>
@@ -351,138 +281,127 @@ const SettingsPage = () => {
           </Card>
 
           {/* Session info */}
-          <Card className="glass border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                Session Information
+          <Card>
+            <CardHeader className="pt-5 pb-3 px-5">
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Session
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Logged in as</p>
-                  <p className="font-medium">{user?.email || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Role</p>
-                  <p className="font-medium">{roleLabel[user?.role || ''] || user?.role || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Organization</p>
-                  <p className="font-medium">{user?.tenantId || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Account Created</p>
-                  <p className="font-medium">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                  </p>
-                </div>
+            <CardContent className="px-5 pb-2">
+              <div className="divide-y divide-border">
+                {[
+                  { label: 'Logged in as',  value: user?.email || 'N/A' },
+                  { label: 'Role',          value: roleLabel[user?.role || ''] || user?.role || 'N/A' },
+                  { label: 'Organisation',  value: user?.tenantId || 'N/A' },
+                  { label: 'Member since',  value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-3">
+                    <span className="text-[13px] text-muted-foreground">{label}</span>
+                    <span className="text-[13px] font-medium text-foreground">{value}</span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ============ SYSTEM TAB ============ */}
-        <TabsContent value="system" className="space-y-6">
-          <Card className="glass border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Bell className="w-4 h-4 text-primary" />
+        {/* ══ SYSTEM ═════════════════════════════════════════════════ */}
+        <TabsContent value="system" className="space-y-5">
+
+          {/* Notifications */}
+          <Card>
+            <CardHeader className="pt-5 pb-3 px-5">
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Notifications
               </CardTitle>
-              <CardDescription>Configure how you receive notifications</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">Email Notifications</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Receive updates about candidates and applications via email
-                  </p>
-                </div>
-                <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-              </div>
-              <Separator className="bg-border/50" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">Push Notifications</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Get browser push notifications for real-time updates
-                  </p>
-                </div>
-                <Switch checked={pushNotifications} onCheckedChange={setPushNotifications} />
+            <CardContent className="px-5 pb-2">
+              <div className="divide-y divide-border">
+                {[
+                  { label: 'Email Notifications', description: 'Updates about candidates and applications via email', checked: emailNotifications, toggle: setEmailNotifications },
+                  { label: 'Push Notifications',  description: 'Real-time browser push notifications',              checked: pushNotifications,  toggle: setPushNotifications  },
+                ].map(({ label, description, checked, toggle }) => (
+                  <div key={label} className="flex items-center justify-between py-3.5 gap-4">
+                    <div>
+                      <p className="text-[14px] font-medium text-foreground">{label}</p>
+                      <p className="text-[12px] text-muted-foreground mt-0.5">{description}</p>
+                    </div>
+                    <Switch checked={checked} onCheckedChange={toggle} />
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="glass border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Settings className="w-4 h-4 text-primary" />
+          {/* Preferences */}
+          <Card>
+            <CardHeader className="pt-5 pb-3 px-5">
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Preferences
               </CardTitle>
-              <CardDescription>Customize your application experience</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Moon className="w-3.5 h-3.5" /> Dark Mode
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Use dark theme across the application
-                  </p>
+            <CardContent className="px-5 pb-5">
+              <div className="divide-y divide-border">
+                {[
+                  { label: 'Dark Mode',        description: 'Use dark theme across the application',                checked: darkMode,    toggle: setDarkMode    },
+                  { label: 'Auto-Refresh Data', description: 'Automatically refresh candidate and application data', checked: autoRefresh, toggle: setAutoRefresh },
+                ].map(({ label, description, checked, toggle }) => (
+                  <div key={label} className="flex items-center justify-between py-3.5 gap-4">
+                    <div>
+                      <p className="text-[14px] font-medium text-foreground">{label}</p>
+                      <p className="text-[12px] text-muted-foreground mt-0.5">{description}</p>
+                    </div>
+                    <Switch checked={checked} onCheckedChange={toggle} />
+                  </div>
+                ))}
+
+                {/* Language */}
+                <div className="flex items-center justify-between py-3.5 gap-4">
+                  <div>
+                    <p className="text-[14px] font-medium text-foreground">Language</p>
+                    <p className="text-[12px] text-muted-foreground mt-0.5">Preferred display language</p>
+                  </div>
+                  <select
+                    value={language}
+                    onChange={e => setLanguage(e.target.value)}
+                    className="h-8 px-3 rounded-lg text-[13px] bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                  </select>
                 </div>
-                <Switch checked={darkMode} onCheckedChange={setDarkMode} />
-              </div>
-              <Separator className="bg-border/50" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">Auto-Refresh Data</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Automatically refresh candidate and application data
-                  </p>
-                </div>
-                <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
-              </div>
-              <Separator className="bg-border/50" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5" /> Language
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Choose your preferred language
-                  </p>
-                </div>
-                <select
-                  value={language}
-                  onChange={e => setLanguage(e.target.value)}
-                  className="glass border border-border/50 rounded-lg px-3 py-1.5 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="en">English</option>
-                  <option value="hi">हिन्दी</option>
-                  <option value="es">Español</option>
-                  <option value="fr">Français</option>
-                </select>
               </div>
 
-              <Separator className="bg-border/50" />
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleConfigSave}
-                  disabled={configSaving}
-                  className="btn-vibrant gap-2"
-                >
-                  {configSaving ? (
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleConfigSave} disabled={configSaving} className="gap-2 h-9">
+                  {configSaving ? <Spinner /> : <Save className="w-3.5 h-3.5" />}
                   Save Preferences
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* About */}
+          <Card>
+            <CardHeader className="pt-5 pb-3 px-5">
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                About
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-2">
+              <div className="divide-y divide-border">
+                {[
+                  { label: 'Application',  value: 'TalentFlow ATS' },
+                  { label: 'Version',      value: '1.0.0'          },
+                  { label: 'Environment',  value: 'Production'     },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-3">
+                    <span className="text-[13px] text-muted-foreground">{label}</span>
+                    <span className="text-[13px] font-medium text-foreground font-mono">{value}</span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
