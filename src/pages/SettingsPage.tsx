@@ -6,15 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 import { toast } from 'sonner';
 import {
   User, Lock, Settings, Mail, Phone, MapPin,
-  Shield, Bell, Moon, Globe, Save, Eye, EyeOff,
+  Shield, Bell, Moon, Sun, Globe, Save, Eye, EyeOff,
   Briefcase, CheckCircle2,
 } from 'lucide-react';
 
 const SettingsPage = () => {
   const { user } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   const [profileName,     setProfileName]     = useState(user?.name  || '');
   const [profileEmail,    setProfileEmail]    = useState(user?.email || '');
@@ -31,7 +33,6 @@ const SettingsPage = () => {
 
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications,  setPushNotifications]  = useState(false);
-  const [darkMode,           setDarkMode]           = useState(true);
   const [autoRefresh,        setAutoRefresh]        = useState(true);
   const [language,           setLanguage]           = useState('en');
   const [configSaving,       setConfigSaving]       = useState(false);
@@ -342,18 +343,29 @@ const SettingsPage = () => {
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="divide-y divide-border">
-                {[
-                  { label: 'Dark Mode',        description: 'Use dark theme across the application',                checked: darkMode,    toggle: setDarkMode    },
-                  { label: 'Auto-Refresh Data', description: 'Automatically refresh candidate and application data', checked: autoRefresh, toggle: setAutoRefresh },
-                ].map(({ label, description, checked, toggle }) => (
-                  <div key={label} className="flex items-center justify-between py-3.5 gap-4">
+                {/* Dark mode row — wired to real theme hook */}
+                <div className="flex items-center justify-between py-3.5 gap-4">
+                  <div className="flex items-center gap-2.5">
+                    {isDark
+                      ? <Moon className="w-4 h-4 text-muted-foreground" />
+                      : <Sun  className="w-4 h-4 text-muted-foreground" />
+                    }
                     <div>
-                      <p className="text-[14px] font-medium text-foreground">{label}</p>
-                      <p className="text-[12px] text-muted-foreground mt-0.5">{description}</p>
+                      <p className="text-[14px] font-medium text-foreground">Dark Mode</p>
+                      <p className="text-[12px] text-muted-foreground mt-0.5">Use dark theme across the application</p>
                     </div>
-                    <Switch checked={checked} onCheckedChange={toggle} />
                   </div>
-                ))}
+                  <Switch checked={isDark} onCheckedChange={toggleTheme} />
+                </div>
+
+                {/* Auto-refresh row */}
+                <div className="flex items-center justify-between py-3.5 gap-4">
+                  <div>
+                    <p className="text-[14px] font-medium text-foreground">Auto-Refresh Data</p>
+                    <p className="text-[12px] text-muted-foreground mt-0.5">Automatically refresh candidate and application data</p>
+                  </div>
+                  <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+                </div>
 
                 {/* Language */}
                 <div className="flex items-center justify-between py-3.5 gap-4">
