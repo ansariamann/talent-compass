@@ -7,7 +7,6 @@ import {
   ChevronDown,
   FileSpreadsheet,
   FileJson,
-  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +25,7 @@ interface BulkActionsToolbarProps {
   clients: Client[];
   onClearSelection: () => void;
   onStatusChange: (candidateIds: string[], status: CandidateStatus) => void;
-  onAssignToClient: (candidateIds: string[], clientId: string) => void;
+  onAssignToClient: () => void;
 }
 
 const statusOptions: { value: CandidateStatus; label: string; color: string }[] = [
@@ -104,10 +103,8 @@ export function BulkActionsToolbar({
     toast.success(`Updated status of ${count} candidate${count > 1 ? 's' : ''} to ${status}`);
   };
 
-  const handleAssignToClient = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId);
-    onAssignToClient(selectedCandidates.map(c => c.id), clientId);
-    toast.success(`Assigned ${count} candidate${count > 1 ? 's' : ''} to ${client?.name || 'client'}`);
+  const handleAssignToClient = () => {
+    onAssignToClient();
   };
 
   if (count === 0) return null;
@@ -148,31 +145,11 @@ export function BulkActionsToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Assign to Client dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Assign to Client
-            <ChevronDown className="w-3 h-3 ml-1" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
-          <DropdownMenuLabel>Select Client</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {clients.map(client => (
-            <DropdownMenuItem 
-              key={client.id}
-              onClick={() => handleAssignToClient(client.id)}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-status-success" />
-                {client.name}
-              </div>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Submit to Client — opens modal */}
+      <Button variant="ghost" size="sm" onClick={handleAssignToClient}>
+        <UserPlus className="w-4 h-4 mr-2" />
+        Submit to Client
+      </Button>
 
       {/* Change Status dropdown */}
       <DropdownMenu>
