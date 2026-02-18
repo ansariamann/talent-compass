@@ -11,10 +11,13 @@ import {
   Database,
   Table2,
   Inbox,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 import {
   Collapsible,
   CollapsibleContent,
@@ -54,6 +57,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(true);
 
@@ -203,6 +207,24 @@ export function Sidebar() {
           <Settings className="w-[18px] h-[18px] shrink-0" />
           {!isCollapsed && <span>Settings</span>}
         </NavLink>
+
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className={cn(
+            'flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] w-full transition-colors duration-100',
+            'text-muted-foreground hover:bg-[hsl(var(--sidebar-accent))] hover:text-foreground'
+          )}
+        >
+          {isDark
+            ? <Sun className="w-[18px] h-[18px] shrink-0" />
+            : <Moon className="w-[18px] h-[18px] shrink-0" />
+          }
+          {!isCollapsed && (
+            <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+          )}
+        </button>
 
         {/* Collapse toggle */}
         <button
