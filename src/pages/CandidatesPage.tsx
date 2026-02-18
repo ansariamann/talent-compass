@@ -7,8 +7,9 @@ import { CandidateDetailModal } from '@/components/candidates/CandidateDetailMod
 import { FloatingCopilot } from '@/components/copilot/FloatingCopilot';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import { BulkActionsToolbar } from '@/components/candidates/BulkActionsToolbar';
+import { SubmitApplicationModal } from '@/components/candidates/SubmitApplicationModal';
 import { useCandidates, useUpdateCandidate } from '@/hooks/useCandidates';
-import { mockClients } from '@/lib/mock-data'; // Clients still from mock until backend endpoint exists
+import { useClients } from '@/hooks/useClients';
 import { Loader2, AlertCircle } from 'lucide-react';
 import type { Candidate, CandidateFilters as CandidateFiltersType, CandidateStatus } from '@/types/ats';
 
@@ -16,6 +17,7 @@ export default function CandidatesPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [modalCandidate, setModalCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -37,6 +39,7 @@ export default function CandidatesPage() {
   );
 
   const updateCandidateMutation = useUpdateCandidate();
+  const { data: clients = [] } = useClients();
 
   // Get candidates array from response
   const candidates = useMemo(() => {
@@ -181,9 +184,9 @@ export default function CandidatesPage() {
     refetch();
   };
 
-  const handleBulkAssignToClient = (candidateIds: string[], clientId: string) => {
-    console.log('Assigning candidates', candidateIds, 'to client', clientId);
-    setSelectedIds([]);
+  const handleBulkAssignToClient = (_candidateIds: string[], _clientId: string) => {
+    // Handled via SubmitApplicationModal
+    setIsSubmitModalOpen(true);
   };
 
   const SearchComponent = (
@@ -241,7 +244,7 @@ export default function CandidatesPage() {
             <CandidateFilters
               filters={filters}
               onFiltersChange={setFilters}
-              clients={mockClients}
+              clients={clients}
             />
           </div>
 
@@ -250,10 +253,10 @@ export default function CandidatesPage() {
             <div className="shrink-0 p-4 border-b border-border">
               <BulkActionsToolbar
                 selectedCandidates={selectedCandidates}
-                clients={mockClients}
+                clients={clients}
                 onClearSelection={handleClearSelection}
                 onStatusChange={handleBulkStatusChange}
-                onAssignToClient={handleBulkAssignToClient}
+                onAssignToClient={() => setIsSubmitModalOpen(true)}
               />
             </div>
           )}
@@ -320,6 +323,17 @@ export default function CandidatesPage() {
           }}
         />
       )}
+
+      {/* Submit Application Modal */}
+      <SubmitApplicationModal
+        open={isSubmitModalOpen}
+        onOpenChange={setIsSubmitModalOpen}
+        candidates={selectedCandidates}
+        onSuccess={() => {
+          setSelectedIds([]);
+          refetch();
+        }}
+      />
 
       {/* Floating AI Copilot - bottom right */}
       <FloatingCopilot
