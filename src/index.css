@@ -2,150 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SF Pro system font stack — identical to Apple's own websites */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @layer base {
   :root {
-    /* ─── Apple HIG Colour Palette ──────────────────────────────────── */
+    /* Core palette - Vibrant glassmorphic dark theme */
+    --background: 240 20% 4%;
+    --foreground: 0 0% 98%;
 
-    /* Backgrounds — layered white/near-white surfaces */
-    --background:       0 0% 97%;      /* systemGroupedBackground  #F2F2F7 */
-    --foreground:       0 0% 7%;       /* label                    #111111 */
+    --card: 240 15% 8%;
+    --card-foreground: 0 0% 98%;
 
-    --card:             0 0% 100%;     /* secondaryGroupedBackground white  */
-    --card-foreground:  0 0% 7%;
+    --popover: 240 15% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --popover:          0 0% 100%;
-    --popover-foreground: 0 0% 7%;
-
-    /* Apple Blue — the single system accent */
-    --primary:          211 100% 50%;  /* #007AFF */
+    --primary: 280 100% 70%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary surfaces */
-    --secondary:        240 5% 96%;
-    --secondary-foreground: 0 0% 20%;
+    --secondary: 200 100% 50%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted:            240 4% 93%;
-    --muted-foreground: 240 3% 46%;   /* secondaryLabel */
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 60%;
 
-    --accent:           211 100% 50%; /* reuse Apple blue */
+    --accent: 330 100% 65%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive:      0 85% 55%;    /* systemRed */
+    --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:           240 5% 88%;   /* separator — very subtle */
-    --input:            0 0% 100%;
-    --ring:             211 100% 50%;
+    --border: 240 10% 20%;
+    --input: 240 10% 18%;
+    --ring: 280 100% 70%;
 
-    --radius:           0.6875rem;    /* 11px — Apple's modal corner radius */
+    --radius: 0.75rem;
 
-    /* ─── Status colours ─────────────────────────────────────────────── */
-    --status-success:   142 72% 36%;  /* systemGreen  */
-    --status-warning:   36 100% 47%;  /* systemOrange */
-    --status-error:     0 85% 55%;    /* systemRed    */
-    --status-info:      211 100% 50%;
-    --status-pending:   270 60% 58%;  /* systemPurple */
-    --status-neutral:   240 3% 60%;
+    /* Status colors - Vibrant */
+    --status-success: 160 85% 45%;
+    --status-warning: 45 100% 55%;
+    --status-error: 0 85% 60%;
+    --status-info: 200 100% 55%;
+    --status-pending: 280 100% 70%;
+    --status-neutral: 240 5% 55%;
 
-    /* ─── Surface tokens ─────────────────────────────────────────────── */
-    --surface-elevated: 0 0% 100%;
-    --surface-overlay:  240 5% 96%;
-    --text-primary:     0 0% 7%;
-    --text-secondary:   240 3% 46%;
-    --text-tertiary:    240 3% 64%;
+    /* Semantic tokens */
+    --surface-elevated: 240 15% 12%;
+    --surface-overlay: 240 15% 16%;
+    --text-primary: 0 0% 98%;
+    --text-secondary: 240 5% 70%;
+    --text-tertiary: 240 5% 50%;
 
-    /* ─── Shadows — Apple uses elevation, not glow ───────────────────── */
-    --shadow-sm:  0 1px 2px hsl(0 0% 0% / 0.06), 0 1px 4px hsl(0 0% 0% / 0.04);
-    --shadow-md:  0 2px 8px hsl(0 0% 0% / 0.08), 0 1px 2px hsl(0 0% 0% / 0.05);
-    --shadow-lg:  0 8px 24px hsl(0 0% 0% / 0.10), 0 2px 4px hsl(0 0% 0% / 0.06);
-    --shadow-glow: var(--shadow-md);       /* no colour glow in Apple HIG  */
-    --shadow-glow-accent: var(--shadow-md);
+    /* Vibrant Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(280 100% 70%) 0%, hsl(200 100% 50%) 50%, hsl(330 100% 65%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(240 15% 12% / 0.8) 0%, hsl(240 20% 6% / 0.9) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(280 100% 70% / 0.2) 0%, hsl(200 100% 50% / 0.1) 40%, transparent 70%);
+    --gradient-vibrant: linear-gradient(135deg, hsl(280 100% 70%) 0%, hsl(330 100% 65%) 100%);
+    --gradient-ocean: linear-gradient(135deg, hsl(200 100% 50%) 0%, hsl(160 85% 45%) 100%);
+    --gradient-sunset: linear-gradient(135deg, hsl(330 100% 65%) 0%, hsl(45 100% 55%) 100%);
 
-    /* ─── Glass — used sparingly, e.g. header translucency ──────────── */
-    --glass-bg:     hsl(0 0% 97% / 0.82);
-    --glass-border: hsl(240 5% 84% / 0.8);
-    --glass-blur:   20px;
+    /* Glassmorphism */
+    --glass-bg: hsl(240 15% 12% / 0.6);
+    --glass-border: hsl(0 0% 100% / 0.1);
+    --glass-blur: 20px;
 
-    /* ─── Sidebar ────────────────────────────────────────────────────── */
-    --sidebar-background:          240 5% 96%;
-    --sidebar-foreground:          0 0% 10%;
-    --sidebar-primary:             211 100% 50%;
-    --sidebar-primary-foreground:  0 0% 100%;
-    --sidebar-accent:              240 5% 90%;
-    --sidebar-accent-foreground:   0 0% 10%;
-    --sidebar-border:              240 5% 88%;
-    --sidebar-ring:                211 100% 50%;
+    /* Shadows - Enhanced with color */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 4px 16px hsl(0 0% 0% / 0.5), 0 0 40px hsl(280 100% 70% / 0.1);
+    --shadow-lg: 0 8px 32px hsl(0 0% 0% / 0.6), 0 0 60px hsl(280 100% 70% / 0.15);
+    --shadow-glow: 0 0 30px hsl(280 100% 70% / 0.4), 0 0 60px hsl(200 100% 50% / 0.2);
+    --shadow-glow-accent: 0 0 30px hsl(330 100% 65% / 0.4);
 
-    /* ─── Gradients — minimal; reserved for data viz ─────────────────── */
-    --gradient-primary: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(211 100% 62%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(240 5% 97%) 100%);
-    --gradient-glow:    none;
-    --gradient-vibrant: var(--gradient-primary);
-    --gradient-ocean:   var(--gradient-primary);
-    --gradient-sunset:  var(--gradient-primary);
+    /* Sidebar - Glassmorphic */
+    --sidebar-background: 240 15% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 280 100% 70%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 20%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 10% 18%;
+    --sidebar-ring: 280 100% 70%;
 
-    /* ─── Motion — Apple spring curves ──────────────────────────────── */
-    --transition-fast: 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    --transition-base: 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    --transition-slow: 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    /* Animation */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Dark mode — macOS dark system colours */
-  .dark {
-    --background:       240 8% 10%;   /* systemBackground dark   #1C1C1E */
-    --foreground:       0 0% 96%;
-
-    --card:             240 6% 14%;   /* secondaryGroupedBackground dark */
-    --card-foreground:  0 0% 96%;
-
-    --popover:          240 6% 16%;
-    --popover-foreground: 0 0% 96%;
-
-    --primary:          211 100% 60%; /* lighter blue for dark bg          */
+  .light {
+    --background: 240 20% 98%;
+    --foreground: 240 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 20% 10%;
+    --primary: 280 100% 60%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary:        240 5% 18%;
-    --secondary-foreground: 0 0% 82%;
-
-    --muted:            240 5% 20%;
-    --muted-foreground: 240 3% 55%;
-
-    --accent:           211 100% 60%;
+    --secondary: 200 100% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 10% 92%;
+    --muted-foreground: 240 10% 40%;
+    --accent: 330 100% 55%;
     --accent-foreground: 0 0% 100%;
-
-    --destructive:      0 75% 60%;
+    --destructive: 0 85% 55%;
     --destructive-foreground: 0 0% 100%;
-
-    --border:           240 4% 22%;
-    --input:            240 5% 18%;
-    --ring:             211 100% 60%;
-
-    --status-success:   142 60% 48%;
-    --status-warning:   36 100% 55%;
-    --status-error:     0 75% 60%;
-    --status-info:      211 100% 60%;
-    --status-pending:   270 60% 65%;
-    --status-neutral:   240 3% 55%;
-
-    --surface-elevated: 240 6% 16%;
-    --surface-overlay:  240 5% 20%;
-
-    --glass-bg:         hsl(240 8% 12% / 0.85);
-    --glass-border:     hsl(0 0% 100% / 0.08);
-
-    --sidebar-background:         240 6% 12%;
-    --sidebar-foreground:         0 0% 88%;
-    --sidebar-primary:            211 100% 60%;
+    --border: 240 10% 85%;
+    --input: 240 10% 88%;
+    --ring: 280 100% 60%;
+    --sidebar-background: 240 15% 96%;
+    --sidebar-foreground: 240 20% 10%;
+    --sidebar-primary: 280 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:             240 5% 18%;
-    --sidebar-accent-foreground:  0 0% 88%;
-    --sidebar-border:             240 4% 20%;
-    --sidebar-ring:               211 100% 60%;
-
-    --shadow-sm:  0 1px 2px hsl(0 0% 0% / 0.3),  0 1px 4px hsl(0 0% 0% / 0.2);
-    --shadow-md:  0 2px 8px hsl(0 0% 0% / 0.4),  0 1px 2px hsl(0 0% 0% / 0.3);
-    --shadow-lg:  0 8px 24px hsl(0 0% 0% / 0.5), 0 2px 4px hsl(0 0% 0% / 0.35);
+    --sidebar-accent: 240 10% 92%;
+    --sidebar-accent-foreground: 240 20% 10%;
+    --sidebar-border: 240 10% 88%;
+    --sidebar-ring: 280 100% 60%;
+    --glass-bg: hsl(0 0% 100% / 0.7);
+    --glass-border: hsl(0 0% 0% / 0.08);
   }
 }
 
@@ -154,146 +126,167 @@
     @apply border-border;
   }
 
-  html {
-    /* Apple uses system-ui which resolves to SF Pro on Apple devices */
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
-                 'Helvetica Neue', Arial, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-  }
-
   body {
-    @apply bg-background text-foreground;
-    font-size: 15px; /* SF Pro Text default reading size */
-    line-height: 1.47; /* Apple's standard body line-height */
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
+  /* Mono font for data */
   .font-mono {
-    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.875em;
+    font-family: 'JetBrains Mono', monospace;
   }
 
-  /* ─── Apple-style ultra-thin scrollbar ─────────────────────── */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 8px;
+    height: 8px;
   }
+
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: hsl(var(--muted));
+    border-radius: 4px;
   }
+
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
-    border-radius: 100px;
+    border-radius: 4px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground));
   }
 }
 
 @layer components {
-  /* ─── Glass — only for translucent headers/toolbars ─────────── */
+  /* Glassmorphic card */
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: saturate(180%) blur(var(--glass-blur));
-    -webkit-backdrop-filter: saturate(180%) blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
   }
 
   .glass-strong {
-    background: var(--glass-bg);
-    backdrop-filter: saturate(200%) blur(30px);
-    -webkit-backdrop-filter: saturate(200%) blur(30px);
-    border: 1px solid var(--glass-border);
+    background: hsl(240 15% 12% / 0.75);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid hsl(0 0% 100% / 0.15);
   }
 
-  /* ─── Data table — Apple Numbers-inspired ───────────────────── */
+  /* Data table styles - Glassmorphic */
   .data-table {
     @apply w-full border-collapse;
   }
 
   .data-table th {
-    @apply text-left text-xs font-semibold uppercase tracking-wide px-4 py-3 border-b border-border;
-    color: hsl(var(--muted-foreground));
-    background: hsl(var(--secondary));
-    letter-spacing: 0.04em;
+    @apply text-left text-xs font-medium uppercase tracking-wider text-muted-foreground px-4 py-3 border-b border-border;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border/60 text-sm;
+    @apply px-4 py-3 border-b border-border/50 text-sm;
   }
 
   .data-table tr {
-    @apply transition-colors duration-100;
+    @apply transition-all duration-200;
   }
 
   .data-table tr:hover td {
-    background: hsl(var(--primary) / 0.04);
+    background: hsl(280 100% 70% / 0.08);
   }
 
-  /* ─── Status badges — flat, colour-coded, no glow ───────────── */
+  /* Status badges - Vibrant with glow */
   .status-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+    backdrop-filter: blur(8px);
   }
 
   .status-badge--success {
-    background: hsl(var(--status-success) / 0.12);
-    color: hsl(var(--status-success));
+    @apply text-[hsl(var(--status-success))];
+    background: hsl(var(--status-success) / 0.2);
+    box-shadow: 0 0 12px hsl(var(--status-success) / 0.3);
   }
+
   .status-badge--warning {
-    background: hsl(var(--status-warning) / 0.12);
-    color: hsl(var(--status-warning));
+    @apply text-[hsl(var(--status-warning))];
+    background: hsl(var(--status-warning) / 0.2);
+    box-shadow: 0 0 12px hsl(var(--status-warning) / 0.3);
   }
+
   .status-badge--error {
-    background: hsl(var(--status-error) / 0.12);
-    color: hsl(var(--status-error));
+    @apply text-[hsl(var(--status-error))];
+    background: hsl(var(--status-error) / 0.2);
+    box-shadow: 0 0 12px hsl(var(--status-error) / 0.3);
   }
+
   .status-badge--info {
-    background: hsl(var(--status-info) / 0.12);
-    color: hsl(var(--status-info));
+    @apply text-[hsl(var(--status-info))];
+    background: hsl(var(--status-info) / 0.2);
+    box-shadow: 0 0 12px hsl(var(--status-info) / 0.3);
   }
+
   .status-badge--pending {
-    background: hsl(var(--status-pending) / 0.12);
-    color: hsl(var(--status-pending));
+    @apply text-[hsl(var(--status-pending))];
+    background: hsl(var(--status-pending) / 0.2);
+    box-shadow: 0 0 12px hsl(var(--status-pending) / 0.3);
   }
+
   .status-badge--neutral {
-    @apply bg-muted text-muted-foreground;
+    @apply bg-muted/60 text-muted-foreground;
+    backdrop-filter: blur(8px);
   }
 
-  /* ─── Keyboard hints ─────────────────────────────────────────── */
+  /* Keyboard shortcut hints */
   .kbd {
-    @apply inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5
-           rounded border text-[10px] font-mono bg-secondary
-           border-border text-muted-foreground;
+    @apply inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded border text-[10px] font-mono;
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+    color: hsl(var(--muted-foreground));
   }
 
-  /* ─── Panel — borderless inset sections (like macOS Preferences) */
+  /* Glow effects - Enhanced */
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .glow-accent {
+    box-shadow: var(--shadow-glow-accent);
+  }
+
+  /* Panel styles - Glassmorphic */
   .panel {
-    @apply rounded-xl bg-card border border-border;
+    @apply rounded-xl;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
   }
 
   .panel-header {
-    @apply px-4 py-3 flex items-center justify-between border-b border-border;
+    @apply px-4 py-3 flex items-center justify-between;
+    border-bottom: 1px solid var(--glass-border);
   }
 
   .panel-body {
     @apply p-4;
   }
 
-  /* ─── AI Copilot message — subtle tint, no gradient border ─── */
+  /* AI Copilot message styles - Gradient border */
   .ai-message {
-    @apply relative pl-4 rounded-xl py-3 pr-4;
-    background: hsl(var(--primary) / 0.06);
-    border-left: 2px solid hsl(var(--primary) / 0.5);
+    @apply relative pl-4 rounded-lg py-3 pr-4;
+    background: linear-gradient(135deg, hsl(280 100% 70% / 0.1) 0%, hsl(200 100% 50% / 0.05) 100%);
+    border-left: 2px solid;
+    border-image: var(--gradient-primary) 1;
   }
 
   .ai-message::before {
     content: '✦';
     @apply absolute -left-px top-3 text-xs;
-    color: hsl(var(--primary));
+    color: hsl(280 100% 70%);
   }
 
-  /* ─── Gradient text — Apple blue only ────────────────────────── */
+  /* Gradient text */
   .gradient-text {
     background: var(--gradient-primary);
     -webkit-background-clip: text;
@@ -301,39 +294,43 @@
     background-clip: text;
   }
 
-  /* ─── Vibrant button — clean solid primary, no glow ─────────── */
+  /* Vibrant button variants */
   .btn-vibrant {
-    @apply bg-primary text-primary-foreground font-medium;
-    transition: all var(--transition-fast);
-    box-shadow: var(--shadow-sm);
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-glow);
+    transition: all 0.3s ease;
   }
 
   .btn-vibrant:hover {
-    filter: brightness(1.08);
-    transform: translateY(-0.5px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: 0 0 40px hsl(280 100% 70% / 0.5), 0 0 80px hsl(200 100% 50% / 0.2);
+    filter: brightness(1.1);
   }
 
   .btn-vibrant:active {
     transform: translateY(0);
-    filter: brightness(0.96);
-    box-shadow: none;
+    box-shadow: var(--shadow-glow);
+    filter: brightness(0.95);
   }
 
-  /* ─── Interactive card — elevation on hover, no colour leaking ─ */
+  /* Interactive card with glow on hover */
   .card-interactive {
-    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .card-interactive:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 32px hsl(0 0% 0% / 0.4), 0 0 30px hsl(280 100% 70% / 0.12);
+    border-color: hsl(280 100% 70% / 0.25);
+    transform: translateY(-2px);
   }
 
-  /* ─── Gradient border — reserved; nearly invisible in Apple style */
+  /* Animated gradient border */
   .gradient-border {
     position: relative;
-    @apply bg-card rounded-xl border border-border;
+    background: hsl(var(--card));
+    border-radius: var(--radius);
   }
 
   .gradient-border::before {
@@ -342,26 +339,37 @@
     inset: -1px;
     border-radius: inherit;
     padding: 1px;
-    background: hsl(var(--primary) / 0.3);
+    background: var(--gradient-primary);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
-    transition: opacity var(--transition-fast);
+    transition: opacity 0.3s ease;
   }
 
   .gradient-border:hover::before {
     opacity: 1;
   }
 
-  /* ─── Icon glow → removed; Apple uses opacity instead ───────── */
+  /* Table row hover glow */
+  .data-table tr {
+    @apply transition-all duration-200;
+  }
+
+  .data-table tr:hover td {
+    background: hsl(280 100% 70% / 0.06);
+    box-shadow: inset 0 0 40px hsl(280 100% 70% / 0.04);
+  }
+
+  /* Icon button glow pulse on hover */
   .icon-glow {
-    transition: opacity var(--transition-fast);
+    transition: all 0.2s ease;
   }
 
   .icon-glow:hover {
-    opacity: 0.7;
+    filter: drop-shadow(0 0 6px hsl(280 100% 70% / 0.5));
+    color: hsl(280 100% 70%);
   }
 }
 
@@ -372,29 +380,29 @@
   }
 
   .animate-pulse-subtle {
-    animation: pulse-subtle 2.4s ease-in-out infinite;
+    animation: pulse-subtle 2s ease-in-out infinite;
   }
 
   @keyframes pulse-subtle {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.65; }
+    50% { opacity: 0.7; }
   }
 
   .animate-slide-in {
-    animation: slide-in 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: slide-in 0.2s ease-out;
   }
 
   @keyframes slide-in {
-    from { transform: translateX(8px); opacity: 0; }
-    to   { transform: translateX(0);   opacity: 1; }
+    from { transform: translateX(10px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 
   .animate-fade-in {
-    animation: fade-in 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: fade-in 0.2s ease-out;
   }
 
   @keyframes fade-in {
     from { opacity: 0; }
-    to   { opacity: 1; }
+    to { opacity: 1; }
   }
 }
