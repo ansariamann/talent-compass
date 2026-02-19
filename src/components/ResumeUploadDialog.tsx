@@ -317,16 +317,16 @@ export function ResumeUploadDialog({
                     {(step === 'upload' || step === 'error' || step === 'ingesting') && (
                         <>
                             <div
-                                className={`
-                  border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-                  transition-colors duration-200
+                        className={`
+                  relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer
+                  transition-all duration-300
                   ${step === 'ingesting' ? 'pointer-events-none opacity-60' : ''}
                   ${isDragging
-                                        ? 'border-primary bg-primary/5'
-                                        : file
-                                            ? 'border-primary/50 bg-primary/5'
-                                            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
-                                    }
+                    ? 'border-primary bg-primary/10 shadow-[0_0_24px_4px_hsl(var(--primary)/0.25)] scale-[1.02]'
+                    : file
+                      ? 'border-primary/60 bg-primary/5 shadow-[0_0_12px_2px_hsl(var(--primary)/0.12)]'
+                      : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 hover:shadow-[0_0_16px_2px_hsl(var(--primary)/0.15)]'
+                  }
                 `}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
@@ -342,14 +342,18 @@ export function ResumeUploadDialog({
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Upload className="w-10 h-10 text-muted-foreground" />
-                                        <p className="font-medium text-sm">
-                                            {isDragging ? 'Drop file here' : 'Click or drag & drop to upload'}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Supports PDF, PNG, JPG, TIFF (max 50MB)
-                                        </p>
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className={`p-4 rounded-full transition-all duration-300 ${isDragging ? 'bg-primary/20 scale-110' : 'bg-muted/60'}`}>
+                                            <Upload className={`w-8 h-8 transition-colors duration-300 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        </div>
+                                        <div>
+                                            <p className={`font-semibold text-sm transition-colors duration-200 ${isDragging ? 'text-primary' : 'text-foreground'}`}>
+                                                {isDragging ? '✦ Release to upload' : 'Click or drag & drop to upload'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                PDF, PNG, JPG, TIFF — up to 50MB
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
 
