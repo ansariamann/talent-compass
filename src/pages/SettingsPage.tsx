@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import {
   User,
   Lock,
@@ -25,10 +26,13 @@ import {
   EyeOff,
   Briefcase,
   CheckCircle2,
+  LogOut,
 } from 'lucide-react';
 
 const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Profile state
   const [profileName, setProfileName] = useState(user?.name || '');
@@ -52,6 +56,17 @@ const SettingsPage = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [language, setLanguage] = useState('en');
   const [configSaving, setConfigSaving] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login');
+    } catch {
+      toast.error('Failed to log out');
+      setLoggingOut(false);
+    }
+  };
 
   const handleProfileSave = async () => {
     setProfileSaving(true);
@@ -379,6 +394,33 @@ const SettingsPage = () => {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+          {/* Logout */}
+          <Card className="glass border-destructive/30">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-destructive">
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </CardTitle>
+              <CardDescription>
+                End your current session and return to the login screen
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="destructive"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="gap-2"
+              >
+                {loggingOut ? (
+                  <span className="w-4 h-4 border-2 border-destructive-foreground/40 border-t-destructive-foreground rounded-full animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                Sign Out
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
