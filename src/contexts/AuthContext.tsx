@@ -52,6 +52,23 @@ export async function fetchWithAuth<T>(
   return JSON.parse(text);
 }
 
+// Transform backend UserResponse to frontend User type
+// Backend returns: { id, email, full_name, client_id, role, client_name, created_at, updated_at }
+// Frontend expects: { id, email, name, client_id, tenantId, role, createdAt, client_name }
+function transformUserResponse(data: Record<string, unknown>): User {
+  return {
+    id: String(data.id || ''),
+    email: String(data.email || ''),
+    name: String(data.full_name || data.name || data.email || ''),
+    full_name: data.full_name ? String(data.full_name) : undefined,
+    role: (data.role as User['role']) || 'client_user',
+    client_id: data.client_id ? String(data.client_id) : undefined,
+    tenantId: String(data.client_id || data.tenantId || ''),
+    client_name: data.client_name ? String(data.client_name) : undefined,
+    createdAt: String(data.created_at || data.createdAt || new Date().toISOString()),
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,8 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const userData = await fetchWithAuth<User>('/auth/me');
-      setUser(userData);
+      const rawData = await fetchWithAuth<Record<string, unknown>>('/auth/me');
+      setUser(transformUserResponse(rawData));
     } catch (error) {
       console.error('Auth check failed:', error);
       removeToken();
@@ -134,8 +151,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Fetch user data
           try {
-            const userData = await fetchWithAuth<User>('/auth/me');
-            setUser(userData);
+            const rawData = await fetchWithAuth<Record<string, unknown>>('/auth/me');
+            setUser(transformUserResponse(rawData));
           } catch {
             // If /auth/me fails, use a basic user object
             setUser({
@@ -143,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: email,
               name: email.split('@')[0],
               role: 'hr_admin',
-              tenantId: 'default',
+              tenantId: 'unknown',
               createdAt: new Date().toISOString(),
             });
           }

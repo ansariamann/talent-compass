@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { CandidateFilters as CandidateFiltersType, CandidateStatus } from '@/types/ats';
 
@@ -36,8 +37,14 @@ export function CandidateFilters({ filters, onFiltersChange, clients }: Candidat
   const activeFilterCount = [
     filters.status?.length ? 1 : 0,
     filters.skills?.length ? 1 : 0,
+    filters.location ? 1 : 0,
     filters.clientId ? 1 : 0,
     filters.minExperience !== undefined ? 1 : 0,
+    filters.maxExperience !== undefined ? 1 : 0,
+    filters.minCtcCurrent !== undefined ? 1 : 0,
+    filters.maxCtcCurrent !== undefined ? 1 : 0,
+    filters.minCtcExpected !== undefined ? 1 : 0,
+    filters.maxCtcExpected !== undefined ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const toggleStatus = (status: CandidateStatus) => {
@@ -171,6 +178,50 @@ export function CandidateFilters({ filters, onFiltersChange, clients }: Candidat
                 ))}
               </div>
             </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Input
+              placeholder="Location"
+              value={filters.location || ''}
+              onChange={(e) => onFiltersChange({ ...filters, location: e.target.value || undefined })}
+            />
+            <Input
+              type="number"
+              placeholder="Min Exp"
+              value={filters.minExperience ?? ''}
+              onChange={(e) => onFiltersChange({ ...filters, minExperience: e.target.value ? Number(e.target.value) : undefined })}
+            />
+            <Input
+              type="number"
+              placeholder="Max Exp"
+              value={filters.maxExperience ?? ''}
+              onChange={(e) => onFiltersChange({ ...filters, maxExperience: e.target.value ? Number(e.target.value) : undefined })}
+            />
+            <Input
+              type="number"
+              placeholder="Min CTC Cur"
+              value={filters.minCtcCurrent ?? ''}
+              onChange={(e) => onFiltersChange({ ...filters, minCtcCurrent: e.target.value ? Number(e.target.value) : undefined })}
+            />
+            <Input
+              type="number"
+              placeholder="Max CTC Cur"
+              value={filters.maxCtcCurrent ?? ''}
+              onChange={(e) => onFiltersChange({ ...filters, maxCtcCurrent: e.target.value ? Number(e.target.value) : undefined })}
+            />
+            <Input
+              type="number"
+              placeholder="Min CTC Exp"
+              value={filters.minCtcExpected ?? ''}
+              onChange={(e) => onFiltersChange({ ...filters, minCtcExpected: e.target.value ? Number(e.target.value) : undefined })}
+            />
+            <Input
+              type="number"
+              placeholder="Max CTC Exp"
+              value={filters.maxCtcExpected ?? ''}
+              onChange={(e) => onFiltersChange({ ...filters, maxCtcExpected: e.target.value ? Number(e.target.value) : undefined })}
+            />
           </div>
         </div>
       )}

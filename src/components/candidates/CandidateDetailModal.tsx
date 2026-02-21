@@ -159,6 +159,13 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
                     <Briefcase className="w-3.5 h-3.5" />
                     {candidate.experience} years exp
                   </span>
+                  {(candidate.ctcCurrent || candidate.ctcExpected) && (
+                    <span className="font-mono">
+                      {candidate.ctcCurrent ? `Cur ₹${candidate.ctcCurrent.toLocaleString()}` : 'Cur -'}
+                      {' | '}
+                      {candidate.ctcExpected ? `Exp ₹${candidate.ctcExpected.toLocaleString()}` : 'Exp -'}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -445,30 +452,32 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
                       <Badge variant="secondary" className="font-mono text-xs">PDF</Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" className="gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => window.open(candidate.resumeUrl, '_blank')}
+                      >
                         <Download className="w-4 h-4" />
                         Download
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => window.open(candidate.resumeUrl, '_blank')}
+                      >
                         <ExternalLink className="w-4 h-4" />
                         Open in new tab
                       </Button>
                     </div>
                   </div>
-                  <div className="flex-1 bg-muted/20 flex items-center justify-center min-h-[400px]">
-                    {/* PDF Viewer Placeholder - In production, use react-pdf or similar */}
-                    <div className="text-center p-8">
-                      <div className="w-64 h-80 mx-auto bg-card border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-4 mb-4">
-                        <FileText className="w-16 h-16 text-muted-foreground/30" />
-                        <div className="text-sm text-muted-foreground">
-                          <p className="font-medium">PDF Preview</p>
-                          <p className="text-xs mt-1">{candidate.resumeUrl}</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Connect to backend to enable PDF viewing
-                      </p>
-                    </div>
+                  <div className="flex-1 bg-muted/20 min-h-[400px]">
+                    <iframe
+                      src={candidate.resumeUrl}
+                      className="h-full w-full"
+                      title={`Resume for ${candidate.name}`}
+                    />
                   </div>
                 </div>
               ) : (

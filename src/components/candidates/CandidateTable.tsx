@@ -137,6 +137,7 @@ export function CandidateTable({
               </span>
             </th>
             <th>Status</th>
+            <th>CTC</th>
             <th>Flags</th>
             <th 
               className="cursor-pointer select-none" 
@@ -201,6 +202,19 @@ export function CandidateTable({
                 </td>
                 <td>
                   <StatusBadge status={candidate.currentStatus} type="candidate" />
+                </td>
+                <td>
+                  <div className="text-xs text-muted-foreground">
+                    {candidate.ctcCurrent || candidate.ctcExpected ? (
+                      <>
+                        {candidate.ctcCurrent ? `Cur: ₹${candidate.ctcCurrent.toLocaleString()}` : 'Cur: -'}
+                        <br />
+                        {candidate.ctcExpected ? `Exp: ₹${candidate.ctcExpected.toLocaleString()}` : 'Exp: -'}
+                      </>
+                    ) : (
+                      '-'
+                    )}
+                  </div>
                 </td>
                 <td>
                   <div className="flex gap-1">

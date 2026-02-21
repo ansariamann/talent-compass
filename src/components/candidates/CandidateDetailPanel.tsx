@@ -133,10 +133,26 @@ export function CandidateDetailPanel({ candidate, onClose, onOpenFull }: Candida
               </div>
             )}
 
+            {(candidate.ctcCurrent || candidate.ctcExpected) && (
+              <div>
+                <h3 className="text-xs font-medium mb-2 uppercase tracking-wide text-muted-foreground">CTC</h3>
+                <p className="text-sm text-muted-foreground">
+                  {candidate.ctcCurrent ? `Current: ₹${candidate.ctcCurrent.toLocaleString()}` : 'Current: -'}
+                  {' | '}
+                  {candidate.ctcExpected ? `Expected: ₹${candidate.ctcExpected.toLocaleString()}` : 'Expected: -'}
+                </p>
+              </div>
+            )}
+
             {/* Quick actions */}
             <div className="flex gap-2 pt-2">
               {candidate.resumeUrl && (
-                <Button variant="outline" size="sm" className="gap-2 flex-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 flex-1"
+                  onClick={() => window.open(candidate.resumeUrl, '_blank')}
+                >
                   <FileText className="w-4 h-4" />
                   Resume
                 </Button>

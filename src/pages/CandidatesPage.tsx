@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
@@ -38,8 +38,10 @@ export default function CandidatesPage() {
     25
   );
 
-  const updateCandidateMutation = useUpdateCandidate();
+  // Fetch clients for filters and assignment
   const { data: clients = [] } = useClients();
+
+  const updateCandidateMutation = useUpdateCandidate();
 
   // Get candidates array from response
   const candidates = useMemo(() => {
@@ -72,22 +74,7 @@ export default function CandidatesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCandidate, isModalOpen]);
 
-  // Parse search query for special syntax
-  const parseSearchQuery = useCallback((query: string) => {
-    const terms: { type: string; value: string }[] = [];
-    const regex = /(\w+):([^\s]+)/g;
-    let match;
-    let remainingQuery = query;
-
-    while ((match = regex.exec(query)) !== null) {
-      terms.push({ type: match[1], value: match[2] });
-      remainingQuery = remainingQuery.replace(match[0], '').trim();
-    }
-
-    return { terms, freeText: remainingQuery };
-  }, []);
-
-  // Filter candidates locally for client-side filters not supported by API
+  // Filter candidates locally only for toggles not supported by backend query params.
   const filteredCandidates = useMemo(() => {
     let result = candidates;
 
@@ -100,54 +87,8 @@ export default function CandidatesPage() {
       result = result.filter(c => !c.isLeaver);
     }
 
-    // Apply skill filters locally if search has special syntax
-    if (searchQuery) {
-      const { terms, freeText } = parseSearchQuery(searchQuery);
-
-      terms.forEach(term => {
-        switch (term.type.toLowerCase()) {
-          case 'skill':
-            result = result.filter(c =>
-              c.skills.some(s => s.toLowerCase().includes(term.value.toLowerCase()))
-            );
-            break;
-          case 'status':
-            result = result.filter(c =>
-              c.currentStatus.toLowerCase().includes(term.value.toLowerCase())
-            );
-            break;
-          case 'exp':
-            const expMatch = term.value.match(/([<>]=?)?(\d+)/);
-            if (expMatch) {
-              const op = expMatch[1] || '>=';
-              const value = parseInt(expMatch[2]);
-              result = result.filter(c => {
-                switch (op) {
-                  case '>': return c.experience > value;
-                  case '>=': return c.experience >= value;
-                  case '<': return c.experience < value;
-                  case '<=': return c.experience <= value;
-                  default: return c.experience >= value;
-                }
-              });
-            }
-            break;
-        }
-      });
-
-      // Apply free text search locally
-      if (freeText) {
-        const lower = freeText.toLowerCase();
-        result = result.filter(c =>
-          c.name.toLowerCase().includes(lower) ||
-          c.email.toLowerCase().includes(lower) ||
-          c.skills.some(s => s.toLowerCase().includes(lower))
-        );
-      }
-    }
-
     return result;
-  }, [candidates, filters, searchQuery, parseSearchQuery]);
+  }, [candidates, filters]);
 
   // Get selected candidates for bulk actions
   const selectedCandidates = useMemo(() => {
@@ -193,7 +134,7 @@ export default function CandidatesPage() {
     <EnhancedSearch
       value={searchQuery}
       onChange={setSearchQuery}
-      placeholder="Search candidates... (⌘K)"
+      placeholder="Search by name, email, skill, location... (Ctrl/Cmd+K)"
     />
   );
 

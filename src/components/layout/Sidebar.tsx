@@ -43,11 +43,11 @@ const navItems: NavItem[] = [
 ];
 
 const databaseItems: DatabaseItem[] = [
-  { label: 'Candidates', href: '/database/candidates', count: 1247 },
-  { label: 'Applications', href: '/database/applications', count: 3892 },
-  { label: 'Clients', href: '/database/clients', count: 48 },
-  { label: 'Jobs', href: '/database/jobs', count: 156 },
-  { label: 'Interviews', href: '/database/interviews', count: 892 },
+  { label: 'Candidates', href: '/database/candidates' },
+  { label: 'Applications', href: '/database/applications' },
+  { label: 'Clients', href: '/database/clients' },
+  { label: 'Jobs', href: '/database/jobs' },
+  { label: 'Interviews', href: '/database/interviews' },
 ];
 
 export function Sidebar() {
@@ -127,7 +127,7 @@ export function Sidebar() {
             <CollapsibleTrigger asChild>
               <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm transition-all duration-200">
                 <Database className="w-5 h-5 shrink-0" />
-                <span>Master Database</span>
+                <span>Master Database (PostgreSQL)</span>
                 <ChevronRight className={cn(
                   "w-4 h-4 ml-auto transition-transform duration-200",
                   isDatabaseOpen && "rotate-90"

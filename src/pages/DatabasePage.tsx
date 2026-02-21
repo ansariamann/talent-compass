@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { candidatesApi, applicationsApi, clientsApi } from '@/lib/api';
+import { candidatesApi, applicationsApi, clientsApi, monitoringApi } from '@/lib/api';
 import { ResumeUploadDialog } from '@/components/ResumeUploadDialog';
 import {
   Table2,
@@ -32,6 +32,15 @@ interface TableData {
   rows: string[][];
 }
 
+interface DatabaseSourceInfo {
+  engine: string;
+  host: string | null;
+  port: number | null;
+  database: string | null;
+  connected: boolean;
+  timestamp: string;
+}
+
 export default function DatabasePage() {
   const { table = 'candidates' } = useParams<{ table?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,16 +48,18 @@ export default function DatabasePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [dbSource, setDbSource] = useState<DatabaseSourceInfo | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const [candidatesRes, applicationsRes, clientsList] = await Promise.allSettled([
+      const [candidatesRes, applicationsRes, clientsList, dbSourceRes] = await Promise.allSettled([
         candidatesApi.list({}, 1, 100),
         applicationsApi.list({}, 1, 100),
         clientsApi.list(),
+        monitoringApi.getDatabaseSource(),
       ]);
 
       const data: Record<string, TableData> = {};
@@ -120,6 +131,12 @@ export default function DatabasePage() {
         rows: [],
       };
 
+      if (dbSourceRes.status === 'fulfilled') {
+        setDbSource(dbSourceRes.value);
+      } else {
+        setDbSource(null);
+      }
+
       setTablesData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -158,6 +175,11 @@ export default function DatabasePage() {
               <h1 className="text-xl font-bold">{tableName}</h1>
               <p className="text-sm text-muted-foreground">
                 {isLoading ? 'Loading...' : `${currentTable.rows.length} records`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {dbSource
+                  ? `Source: ${dbSource.engine.toUpperCase()} ${dbSource.database ? `(${dbSource.database})` : ''} ${dbSource.connected ? 'connected' : 'disconnected'}`
+                  : 'Source: backend database connection'}
               </p>
             </div>
           </div>

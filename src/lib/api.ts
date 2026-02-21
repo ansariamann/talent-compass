@@ -35,13 +35,20 @@ async function fetchWithAuth<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
+
+
+  const headers: Record<string, string> = {
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    headers,
   });
 
   if (response.status === 401) {
@@ -76,6 +83,7 @@ interface BackendCandidate {
   experience?: Record<string, unknown> | null;
   ctc_current?: number | null;
   ctc_expected?: number | null;
+  resume_file_path?: string | null;
   status: string;
   remark?: string | null;
   candidate_hash?: string | null;
@@ -101,6 +109,11 @@ function transformCandidate(backend: BackendCandidate): Candidate {
   if (backend.experience && typeof backend.experience === 'object') {
     experience = (backend.experience as { years?: number }).years || 0;
   }
+  const resumeUrl = backend.resume_file_path
+    ? (backend.resume_file_path.startsWith('http') ? backend.resume_file_path : `${API_BASE}${backend.resume_file_path}`)
+    : undefined;
+  const ctcCurrent = backend.ctc_current == null ? undefined : Number(backend.ctc_current);
+  const ctcExpected = backend.ctc_expected == null ? undefined : Number(backend.ctc_expected);
 
   return {
     id: backend.id,
@@ -111,14 +124,14 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     skills: Array.isArray(skills) ? skills : [],
     experience,
     currentStatus: statusMap[backend.status] || 'new',
-    resumeUrl: undefined,
+    resumeUrl,
     resumeParsed: undefined,
     flags: [],
     isBlacklisted: backend.status === 'REJECTED',
     isLeaver: backend.status === 'LEFT',
     remark: backend.remark || undefined,
-    ctcCurrent: backend.ctc_current || undefined,
-    ctcExpected: backend.ctc_expected || undefined,
+    ctcCurrent,
+    ctcExpected,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
   };
@@ -256,6 +269,13 @@ export const candidatesApi = {
     // Add filters
     if (filters.search) params.set('name_pattern', filters.search);
     if (filters.skills?.length) params.set('skills', filters.skills.join(','));
+    if (filters.location) params.set('location', filters.location);
+    if (filters.minExperience !== undefined) params.set('min_experience', String(filters.minExperience));
+    if (filters.maxExperience !== undefined) params.set('max_experience', String(filters.maxExperience));
+    if (filters.minCtcCurrent !== undefined) params.set('min_ctc_current', String(filters.minCtcCurrent));
+    if (filters.maxCtcCurrent !== undefined) params.set('max_ctc_current', String(filters.maxCtcCurrent));
+    if (filters.minCtcExpected !== undefined) params.set('min_ctc_expected', String(filters.minCtcExpected));
+    if (filters.maxCtcExpected !== undefined) params.set('max_ctc_expected', String(filters.maxCtcExpected));
     if (filters.status?.length) {
       // Map frontend statuses to backend
       const backendStatuses = filters.status.map(s => {
@@ -265,7 +285,7 @@ export const candidatesApi = {
         };
         return map[s] || 'ACTIVE';
       });
-      params.set('status', backendStatuses[0]); // Backend only supports single status filter
+      params.set('candidate_status', backendStatuses[0]); // Backend currently supports single status filter
     }
 
     const response = await fetchWithAuth<BackendCandidate[]>(`/candidates?${params}`);
@@ -282,6 +302,16 @@ export const candidatesApi = {
     const response = await fetchWithAuth<BackendCandidate>('/candidates', {
       method: 'POST',
       body: JSON.stringify(backendData),
+    });
+    return transformCandidate(response);
+  },
+
+  uploadResume: async (file: File): Promise<Candidate> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetchWithAuth<BackendCandidate>('/candidates/upload', {
+      method: 'POST',
+      body: formData,
     });
     return transformCandidate(response);
   },
@@ -498,11 +528,43 @@ export const emailApi = {
 };
 
 // Clients API
+interface BackendClient {
+  id: string;
+  name: string;
+  email_domain?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BackendClientProvisionResponse extends BackendClient {
+  credentials_generated?: boolean;
+  admin_email?: string | null;
+  admin_password?: string | null;
+  portal_login_url?: string | null;
+}
+
+function toFrontendClient(backend: BackendClient): Client {
+  return {
+    id: backend.id,
+    name: backend.name,
+    industry: 'General',
+    contactEmail: backend.email_domain ? `admin@${backend.email_domain}` : '',
+    contactName: `${backend.name} Admin`,
+    isActive: true,
+    isRegistered: false,
+    createdAt: backend.created_at,
+    updatedAt: backend.updated_at,
+  };
+}
+
 export const clientsApi = {
   list: async (): Promise<Client[]> => {
     try {
-      const response = await fetchWithAuth<Client[]>('/clients');
-      return response;
+      const response = await fetchWithAuth<BackendClient[]>('/clients');
+      if (!Array.isArray(response)) {
+        return [];
+      }
+      return response.map(toFrontendClient);
     } catch {
       // Fallback to empty array if endpoint doesn't exist
       console.warn('Clients endpoint not available, using empty list');
@@ -510,19 +572,47 @@ export const clientsApi = {
     }
   },
   get: async (id: string): Promise<Client> => {
-    return fetchWithAuth<Client>(`/clients/${id}`);
+    const response = await fetchWithAuth<BackendClient>(`/clients/${id}`);
+    return toFrontendClient(response);
   },
-  create: async (data: Partial<Client>): Promise<Client> => {
-    return fetchWithAuth<Client>('/clients', {
+  create: async (
+    data: Partial<Client>
+  ): Promise<Client & { provisionedCredentials?: { email: string; password: string; loginUrl: string } }> => {
+    const emailDomain = data.contactEmail?.includes('@')
+      ? data.contactEmail.split('@')[1]
+      : undefined;
+    const response = await fetchWithAuth<BackendClientProvisionResponse>('/clients', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        name: data.name,
+        email_domain: emailDomain,
+      }),
     });
+    const frontend = toFrontendClient(response);
+    if (response.credentials_generated && response.admin_email && response.admin_password) {
+      return {
+        ...frontend,
+        provisionedCredentials: {
+          email: response.admin_email,
+          password: response.admin_password,
+          loginUrl: response.portal_login_url || 'http://localhost:8080/login',
+        },
+      };
+    }
+    return frontend;
   },
   update: async (id: string, data: Partial<Client>): Promise<Client> => {
-    return fetchWithAuth<Client>(`/clients/${id}`, {
+    const emailDomain = data.contactEmail?.includes('@')
+      ? data.contactEmail.split('@')[1]
+      : undefined;
+    const response = await fetchWithAuth<BackendClient>(`/clients/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        name: data.name,
+        email_domain: emailDomain,
+      }),
     });
+    return toFrontendClient(response);
   },
   delete: async (id: string): Promise<void> => {
     await fetchWithAuth<void>(`/clients/${id}`, {
@@ -534,6 +624,18 @@ export const clientsApi = {
       method: 'POST',
     });
   },
+};
+
+// Monitoring / Infrastructure
+export const monitoringApi = {
+  getDatabaseSource: () => fetchWithAuth<{
+    engine: string;
+    host: string | null;
+    port: number | null;
+    database: string | null;
+    connected: boolean;
+    timestamp: string;
+  }>('/monitoring/database/source'),
 };
 
 // Copilot (LLM) - Note: Backend may not have this endpoint

@@ -5,7 +5,7 @@ import type { Client } from '@/types/ats';
 import { toast } from 'sonner';
 
 // Use mock data for now until backend is connected
-const useMockData = true;
+const useMockData = false;
 
 export function useClients() {
   return useQuery({
@@ -69,9 +69,16 @@ export function useCreateClient() {
       }
       return clientsApi.create(data);
     },
-    onSuccess: () => {
+    onSuccess: (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Client created successfully');
+      if (createdClient.provisionedCredentials) {
+        const creds = createdClient.provisionedCredentials;
+        toast.info(
+          `Client login created: ${creds.email} / ${creds.password} (${creds.loginUrl})`,
+          { duration: 12000 }
+        );
+      }
     },
     onError: (error) => {
       toast.error(`Failed to create client: ${error.message}`);
@@ -141,9 +148,9 @@ export function useSendClientInvite() {
           const token = `reg_${Date.now()}_${Math.random().toString(36).substring(7)}`;
           (mockClients[index] as Client).registrationToken = token;
           (mockClients[index] as Client).registrationSentAt = new Date().toISOString();
-          return { 
-            token, 
-            link: `${window.location.origin}/client-register?token=${token}` 
+          return {
+            token,
+            link: `${window.location.origin}/client-register?token=${token}`
           };
         }
         throw new Error('Client not found');

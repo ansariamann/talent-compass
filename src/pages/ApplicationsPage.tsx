@@ -6,9 +6,9 @@ import { StatusBadge } from '@/components/candidates/StatusBadge';
 import { ApplicationFormModal } from '@/components/applications/ApplicationFormModal';
 import { ApplicationActionsMenu } from '@/components/applications/ApplicationActionsMenu';
 import { ApplicationFiltersBar } from '@/components/applications/ApplicationFiltersBar';
-import { 
-  useApplications, 
-  useCreateApplication, 
+import {
+  useApplications,
+  useCreateApplication,
   useUpdateApplication,
   useDeleteApplication,
   useRestoreApplication,
@@ -16,7 +16,7 @@ import {
   useUnflagApplication,
 } from '@/hooks/useApplications';
 import { useCandidates } from '@/hooks/useCandidates';
-import { mockClients } from '@/lib/mock-data';
+import { useClients } from '@/hooks/useClients';
 import { Calendar, MessageSquare, Loader2, AlertCircle, Plus, Flag, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Application, Candidate, ApplicationFilters } from '@/types/ats';
@@ -43,6 +43,9 @@ export default function ApplicationsPage() {
     error: applicationsError,
     refetch
   } = useApplications(filters, page, 25);
+
+  // Fetch clients
+  const { data: clients = [] } = useClients();
 
   // Fetch candidates to get candidate details
   const { data: candidatesResponse } = useCandidates({}, 1, 100);
@@ -159,8 +162,8 @@ export default function ApplicationsPage() {
 
         <div className="grid gap-4">
           {filteredApplications.map((app) => (
-            <ApplicationCard 
-              key={app.id} 
+            <ApplicationCard
+              key={app.id}
               application={app}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -211,7 +214,7 @@ export default function ApplicationsPage() {
         onUpdate={handleUpdate}
         application={editingApplication}
         candidates={candidatesResponse?.data || []}
-        clients={mockClients}
+        clients={clients}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
     </DashboardLayout>

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import { useCandidates, useCandidateSearch, useCandidateStatistics } from '@/hooks/useCandidates';
 import { useApplications, useApplicationStatistics } from '@/hooks/useApplications';
+import { useClients } from '@/hooks/useClients';
 import { Candidate } from '@/types/ats';
 import {
   Users,
@@ -31,6 +32,8 @@ export default function MonitoringPage() {
   const candidates = candidatesResponse?.data || [];
   const applications = applicationsResponse?.data || [];
 
+  const { data: clients = [] } = useClients();
+
   // Calculate stats from real data
   const stats = {
     totalCandidates: candidateStats?.total_candidates || candidates.length,
@@ -42,8 +45,8 @@ export default function MonitoringPage() {
     }).length,
     totalApplications: applicationStats?.total_applications || applications.length,
     pendingApplications: applications.filter(a => a.status === 'pending' || a.status === 'in_review').length,
-    totalClients: 3, // Hardcoded until clients endpoint exists
-    activeClients: 3,
+    totalClients: clients.length,
+    activeClients: clients.filter(c => c.isActive).length,
   };
 
   // Status breakdown from API or calculated

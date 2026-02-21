@@ -28,10 +28,13 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  full_name?: string;
   role: UserRole;
+  client_id?: string;
   tenantId: string;
   avatarUrl?: string;
   createdAt: string;
+  client_name?: string;
 }
 
 export interface Candidate {
@@ -163,10 +166,15 @@ export interface InterviewFeedback {
 export interface CandidateFilters {
   search?: string;
   skills?: string[];
+  location?: string;
   status?: CandidateStatus[];
   clientId?: string;
   minExperience?: number;
   maxExperience?: number;
+  minCtcCurrent?: number;
+  maxCtcCurrent?: number;
+  minCtcExpected?: number;
+  maxCtcExpected?: number;
   dateFrom?: string;
   dateTo?: string;
   excludeBlacklisted?: boolean;
