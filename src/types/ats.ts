@@ -43,6 +43,11 @@ export interface Candidate {
   email: string;
   phone?: string;
   location?: string;
+  presentAddress?: string;
+  permanentAddress?: string;
+  dateOfBirth?: string;
+  previousEmployment?: Array<Record<string, unknown>>;
+  keySkill?: string;
   skills: string[];
   experience: number; // years
   currentStatus: CandidateStatus;
@@ -162,6 +167,20 @@ export interface InterviewFeedback {
   comments: string;
 }
 
+export interface Job {
+  id: string;
+  clientId: string;
+  title: string;
+  companyName: string;
+  postingDate: string;
+  requirements?: string;
+  experienceRequired?: number;
+  salaryLpa?: number;
+  location?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Filter types
 export interface CandidateFilters {
   search?: string;
@@ -190,6 +209,15 @@ export interface ApplicationFilters {
   dateTo?: string;
   flaggedOnly?: boolean;
   includeDeleted?: boolean;
+}
+
+export interface JobFilters {
+  search?: string;
+  companyName?: string;
+  jobTitle?: string;
+  location?: string;
+  minExperience?: number;
+  maxExperience?: number;
 }
 
 // Pagination

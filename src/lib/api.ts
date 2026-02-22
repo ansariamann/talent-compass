@@ -15,6 +15,8 @@ import type {
   EmailIngestionRequest,
   IngestionResponse,
   ParseJobResponse,
+  Job,
+  JobFilters,
 } from '@/types/ats';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -79,10 +81,16 @@ interface BackendCandidate {
   email?: string | null;
   phone?: string | null;
   location?: string | null;
+  present_address?: string | null;
+  permanent_address?: string | null;
+  date_of_birth?: string | null;
+  previous_employment?: Record<string, unknown>[] | null;
+  key_skill?: string | null;
   skills?: { skills?: string[] } | null;
   experience?: Record<string, unknown> | null;
   ctc_current?: number | null;
   ctc_expected?: number | null;
+  resume_url?: string | null;
   resume_file_path?: string | null;
   status: string;
   remark?: string | null;
@@ -109,8 +117,9 @@ function transformCandidate(backend: BackendCandidate): Candidate {
   if (backend.experience && typeof backend.experience === 'object') {
     experience = (backend.experience as { years?: number }).years || 0;
   }
-  const resumeUrl = backend.resume_file_path
-    ? (backend.resume_file_path.startsWith('http') ? backend.resume_file_path : `${API_BASE}${backend.resume_file_path}`)
+  const rawResumeUrl = backend.resume_url || backend.resume_file_path;
+  const resumeUrl = rawResumeUrl
+    ? (rawResumeUrl.startsWith('http') ? rawResumeUrl : `${API_BASE}${rawResumeUrl}`)
     : undefined;
   const ctcCurrent = backend.ctc_current == null ? undefined : Number(backend.ctc_current);
   const ctcExpected = backend.ctc_expected == null ? undefined : Number(backend.ctc_expected);
@@ -121,6 +130,11 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     email: backend.email || '',
     phone: backend.phone || undefined,
     location: backend.location || undefined,
+    presentAddress: backend.present_address || undefined,
+    permanentAddress: backend.permanent_address || undefined,
+    dateOfBirth: backend.date_of_birth || undefined,
+    previousEmployment: backend.previous_employment || undefined,
+    keySkill: backend.key_skill || undefined,
     skills: Array.isArray(skills) ? skills : [],
     experience,
     currentStatus: statusMap[backend.status] || 'new',
@@ -158,6 +172,11 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.email !== undefined) result.email = frontend.email;
   if (frontend.phone !== undefined) result.phone = frontend.phone;
   if (frontend.location !== undefined) result.location = frontend.location;
+  if (frontend.presentAddress !== undefined) result.present_address = frontend.presentAddress;
+  if (frontend.permanentAddress !== undefined) result.permanent_address = frontend.permanentAddress;
+  if (frontend.dateOfBirth !== undefined) result.date_of_birth = frontend.dateOfBirth;
+  if (frontend.previousEmployment !== undefined) result.previous_employment = frontend.previousEmployment;
+  if (frontend.keySkill !== undefined) result.key_skill = frontend.keySkill;
   if (frontend.skills !== undefined) result.skills = { skills: frontend.skills };
   if (frontend.experience !== undefined) result.experience = { years: frontend.experience };
   if (frontend.currentStatus !== undefined) result.status = statusMap[frontend.currentStatus] || 'ACTIVE';
@@ -178,6 +197,20 @@ interface BackendApplication {
   is_flagged: boolean;
   flag_reason?: string | null;
   is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BackendJob {
+  id: string;
+  client_id: string;
+  title: string;
+  company_name: string;
+  posting_date: string;
+  requirements?: string | null;
+  experience_required?: number | null;
+  salary_lpa?: number | null;
+  location?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -208,6 +241,22 @@ function transformApplication(backend: BackendApplication): Application {
     isFlagged: backend.is_flagged,
     flagReason: backend.flag_reason || undefined,
     isDeleted: backend.is_deleted,
+  };
+}
+
+function transformJob(backend: BackendJob): Job {
+  return {
+    id: backend.id,
+    clientId: backend.client_id,
+    title: backend.title,
+    companyName: backend.company_name,
+    postingDate: backend.posting_date,
+    requirements: backend.requirements || undefined,
+    experienceRequired: backend.experience_required ?? undefined,
+    salaryLpa: backend.salary_lpa ?? undefined,
+    location: backend.location || undefined,
+    createdAt: backend.created_at,
+    updatedAt: backend.updated_at,
   };
 }
 
@@ -488,6 +537,83 @@ export const applicationsApi = {
     flagged_count: number;
     deleted_count: number;
   }>('/applications/statistics'),
+};
+
+// Jobs
+export const jobsApi = {
+  list: async (filters: JobFilters = {}, page = 1, pageSize = 100): Promise<PaginatedResponse<Job>> => {
+    const params = new URLSearchParams({
+      skip: String((page - 1) * pageSize),
+      limit: String(pageSize),
+    });
+
+    if (filters.search) params.set('search', filters.search);
+    if (filters.companyName) params.set('company_name', filters.companyName);
+    if (filters.jobTitle) params.set('job_title', filters.jobTitle);
+    if (filters.location) params.set('location', filters.location);
+    if (filters.minExperience !== undefined) params.set('min_experience', String(filters.minExperience));
+    if (filters.maxExperience !== undefined) params.set('max_experience', String(filters.maxExperience));
+
+    const response = await fetchWithAuth<BackendJob[]>(`/jobs?${params}`);
+    return transformPaginatedResponse(response, transformJob, page, pageSize);
+  },
+
+  create: async (data: {
+    title: string;
+    companyName: string;
+    postingDate?: string;
+    requirements?: string;
+    experienceRequired?: number;
+    salaryLpa?: number;
+    location?: string;
+  }): Promise<Job> => {
+    const backendData = {
+      title: data.title,
+      company_name: data.companyName,
+      posting_date: data.postingDate,
+      requirements: data.requirements,
+      experience_required: data.experienceRequired,
+      salary_lpa: data.salaryLpa,
+      location: data.location,
+    };
+    const response = await fetchWithAuth<BackendJob>('/jobs', {
+      method: 'POST',
+      body: JSON.stringify(backendData),
+    });
+    return transformJob(response);
+  },
+
+  update: async (
+    id: string,
+    data: {
+      title?: string;
+      companyName?: string;
+      postingDate?: string;
+      requirements?: string;
+      experienceRequired?: number;
+      salaryLpa?: number;
+      location?: string;
+    }
+  ): Promise<Job> => {
+    const backendData: Record<string, unknown> = {};
+    if (data.title !== undefined) backendData.title = data.title;
+    if (data.companyName !== undefined) backendData.company_name = data.companyName;
+    if (data.postingDate !== undefined) backendData.posting_date = data.postingDate;
+    if (data.requirements !== undefined) backendData.requirements = data.requirements;
+    if (data.experienceRequired !== undefined) backendData.experience_required = data.experienceRequired;
+    if (data.salaryLpa !== undefined) backendData.salary_lpa = data.salaryLpa;
+    if (data.location !== undefined) backendData.location = data.location;
+
+    const response = await fetchWithAuth<BackendJob>(`/jobs/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(backendData),
+    });
+    return transformJob(response);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await fetchWithAuth<void>(`/jobs/${id}`, { method: 'DELETE' });
+  },
 };
 
 // Email Ingestion & Resume Parsing
