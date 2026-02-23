@@ -112,7 +112,7 @@ export default function ApplicationsPage() {
   // Loading state
   if (isLoadingApplications) {
     return (
-      <DashboardLayout title="Applications">
+      <DashboardLayout title="Applications" onSearch={setSearchQuery}>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -126,7 +126,7 @@ export default function ApplicationsPage() {
   // Error state
   if (applicationsError) {
     return (
-      <DashboardLayout title="Applications">
+      <DashboardLayout title="Applications" onSearch={setSearchQuery}>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="flex flex-col items-center gap-4 text-center">
             <AlertCircle className="w-8 h-8 text-destructive" />
@@ -144,7 +144,7 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <DashboardLayout title="Applications">
+    <DashboardLayout title="Applications" onSearch={setSearchQuery}>
       {/* Filters Bar */}
       <ApplicationFiltersBar filters={filters} onFiltersChange={setFilters} />
 

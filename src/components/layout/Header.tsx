@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
-import { Bell, LogOut, User } from 'lucide-react';
+import { Bell, Search, Wifi, WifiOff, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -14,10 +16,12 @@ import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   title: string;
+  isConnected?: boolean;
+  onSearch?: (query: string) => void;
   searchComponent?: ReactNode;
 }
 
-export function Header({ title, searchComponent }: HeaderProps) {
+export function Header({ title, isConnected = true, onSearch, searchComponent }: HeaderProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -38,9 +42,19 @@ export function Header({ title, searchComponent }: HeaderProps) {
           <h1 className="text-lg font-semibold">{title}</h1>
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Search & Actions */}
         <div className="flex items-center gap-3">
-          {searchComponent}
+          {searchComponent ? searchComponent : onSearch && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                variant="search"
+                placeholder="Search... (⌘K)"
+                className="w-64"
+                onChange={(e) => onSearch(e.target.value)}
+              />
+            </div>
+          )}
 
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-4 h-4" />
