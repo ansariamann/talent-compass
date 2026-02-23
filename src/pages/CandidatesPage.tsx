@@ -4,7 +4,6 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
 import { CandidateDetailPanel } from '@/components/candidates/CandidateDetailPanel';
 import { CandidateDetailModal } from '@/components/candidates/CandidateDetailModal';
-import { FloatingCopilot } from '@/components/copilot/FloatingCopilot';
 import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import { BulkActionsToolbar } from '@/components/candidates/BulkActionsToolbar';
 import { SubmitApplicationModal } from '@/components/candidates/SubmitApplicationModal';
@@ -130,13 +129,7 @@ export default function CandidatesPage() {
     setIsSubmitModalOpen(true);
   };
 
-  const SearchComponent = (
-    <EnhancedSearch
-      value={searchQuery}
-      onChange={setSearchQuery}
-      placeholder="Search by name, email, skill, location... (Ctrl/Cmd+K)"
-    />
-  );
+  const SearchComponent = null;
 
   // Loading state
   if (isLoading) {
@@ -180,7 +173,15 @@ export default function CandidatesPage() {
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Main content area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Filters */}
+          {/* Search & Filters */}
+          <div className="shrink-0 px-6 pt-4 pb-2">
+            <EnhancedSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search by name, email, skill, location... (Ctrl/Cmd+K)"
+              className="max-w-2xl"
+            />
+          </div>
           <div className="shrink-0">
             <CandidateFilters
               filters={filters}
@@ -276,13 +277,6 @@ export default function CandidatesPage() {
         }}
       />
 
-      {/* Floating AI Copilot - bottom right */}
-      <FloatingCopilot
-        context={selectedCandidate ? {
-          candidateId: selectedCandidate.id,
-          candidateName: selectedCandidate.name,
-        } : undefined}
-      />
     </DashboardLayout>
   );
 }

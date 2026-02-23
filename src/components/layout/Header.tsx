@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Bell, Search, Wifi, WifiOff, LogOut, User } from 'lucide-react';
+import { Search, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -55,11 +55,6 @@ export function Header({ title, isConnected = true, onSearch, searchComponent }:
               />
             </div>
           )}
-
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-4 h-4" />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-status-error rounded-full" />
-          </Button>
 
           {/* User menu dropdown */}
           <DropdownMenu>
