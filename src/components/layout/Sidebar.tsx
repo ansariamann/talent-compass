@@ -9,11 +9,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  Table2,
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
@@ -23,11 +29,25 @@ interface NavItem {
   badge?: string;
 }
 
+interface DatabaseItem {
+  label: string;
+  href: string;
+  count?: number;
+}
+
 const navItems: NavItem[] = [
   { label: 'Candidates', href: '/candidates', icon: Users },
   { label: 'Applications', href: '/applications', icon: FileText },
-  { label: 'Processing', href: '/resume-processing', icon: FileText },
+  { label: 'Processing', href: '/resume-processing', icon: FileText }, // Using FileText for now, or maybe Mail/Inbox
   { label: 'Clients', href: '/clients', icon: Building2 },
+];
+
+const databaseItems: DatabaseItem[] = [
+  { label: 'Candidates', href: '/database/candidates' },
+  { label: 'Applications', href: '/database/applications' },
+  { label: 'Clients', href: '/database/clients' },
+  { label: 'Jobs', href: '/database/jobs' },
+  { label: 'Interviews', href: '/database/interviews' },
 ];
 
 export function Sidebar() {
@@ -35,6 +55,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDatabaseOpen, setIsDatabaseOpen] = useState(true);
 
   const handleLogout = async () => {
     await logout();
@@ -100,6 +121,64 @@ export function Sidebar() {
           );
         })}
 
+        {/* Master Database Section */}
+        {!isCollapsed ? (
+          <Collapsible open={isDatabaseOpen} onOpenChange={setIsDatabaseOpen} className="mt-4">
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm transition-all duration-200">
+                <Database className="w-5 h-5 shrink-0" />
+                <span>Master Database (PostgreSQL)</span>
+                <ChevronRight className={cn(
+                  "w-4 h-4 ml-auto transition-transform duration-200",
+                  isDatabaseOpen && "rotate-90"
+                )} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 space-y-1 mt-1">
+              {databaseItems.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <NavLink
+                    key={item.href}
+                    to={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative group",
+                      isActive
+                        ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
+                        : "text-foreground/60 hover:text-foreground hover:bg-white/5"
+                    )}
+                  >
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-vibrant-purple/10 opacity-50" />
+                    )}
+                    <Table2 className={cn(
+                      "w-4 h-4 shrink-0 relative z-10",
+                      isActive && "text-primary"
+                    )} />
+                    <span className="relative z-10">{item.label}</span>
+                    {item.count !== undefined && (
+                      <span className="ml-auto text-xs text-muted-foreground font-mono relative z-10">
+                        {item.count.toLocaleString()}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <NavLink
+            to="/database"
+            className={cn(
+              "flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+              location.pathname.startsWith('/database')
+                ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
+                : "text-foreground/70 hover:text-foreground hover:bg-white/5"
+            )}
+          >
+            <Database className="w-5 h-5" />
+          </NavLink>
+        )}
       </nav>
 
       {/* Bottom section */}
