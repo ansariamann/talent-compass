@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
   const { toast } = useToast();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +41,7 @@ export default function LoginPage() {
     }
 
     const { success, error } = await login(email, password);
-    
+
     if (success) {
       toast({
         title: 'Welcome back!',
@@ -62,7 +62,7 @@ export default function LoginPage() {
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-background to-background relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%2306b6d4%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12">
           <div className="mb-12">
             <h1 className="text-4xl font-bold text-foreground mb-4">
@@ -74,17 +74,17 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-6">
-            <FeatureItem 
+            <FeatureItem
               icon={<Users className="w-5 h-5" />}
               title="Candidate Management"
               description="Track and manage candidates through every stage"
             />
-            <FeatureItem 
+            <FeatureItem
               icon={<Briefcase className="w-5 h-5" />}
               title="Application Tracking"
               description="Monitor applications with real-time status updates"
             />
-            <FeatureItem 
+            <FeatureItem
               icon={<Shield className="w-5 h-5" />}
               title="Secure & Compliant"
               description="Enterprise-grade security for your sensitive data"
@@ -110,7 +110,7 @@ export default function LoginPage() {
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -159,23 +159,23 @@ export default function LoginPage() {
 
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-border bg-muted accent-primary"
                   />
                   <span className="text-muted-foreground">Remember me</span>
                 </label>
-                <button 
-                  type="button"
+                <Link
+                  to="/forgot-password"
                   className="text-primary hover:text-primary/80 transition-colors"
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -204,13 +204,13 @@ export default function LoginPage() {
   );
 }
 
-function FeatureItem({ 
-  icon, 
-  title, 
-  description 
-}: { 
-  icon: React.ReactNode; 
-  title: string; 
+function FeatureItem({
+  icon,
+  title,
+  description
+}: {
+  icon: React.ReactNode;
+  title: string;
   description: string;
 }) {
   return (
