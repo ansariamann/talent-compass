@@ -55,7 +55,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isDatabaseOpen, setIsDatabaseOpen] = useState(true);
+  const [isDatabaseOpen, setIsDatabaseOpen] = useState(() => true);
 
   const handleLogout = async () => {
     await logout();
