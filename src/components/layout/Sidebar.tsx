@@ -3,18 +3,25 @@ import {
   Users,
   FileText,
   Building2,
-  BarChart3,
   Settings,
   Sparkles,
   ChevronLeft,
   ChevronRight,
   Database,
   Table2,
-  LogOut,
+  Search,
 } from 'lucide-react';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -55,7 +62,8 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isDatabaseOpen, setIsDatabaseOpen] = useState(true);
+  const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -65,6 +73,18 @@ export function Sidebar() {
   const userInitials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() || 'U';
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIsSearchOpen((open) => !open);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
+
   return (
     <aside
       className={cn(
@@ -89,6 +109,20 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto relative z-10">
+        {/* Search Button */}
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm w-full"
+        >
+          <Search className="w-5 h-5 shrink-0" />
+          {!isCollapsed && (
+            <>
+              <span>Search</span>
+              <kbd className="ml-auto text-[10px] font-mono bg-muted/50 px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground">⌘K</kbd>
+            </>
+          )}
+        </button>
+
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -218,6 +252,45 @@ export function Sidebar() {
           )}
         </Button>
       </div>
+      {/* Search Command Dialog */}
+      <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <CommandInput placeholder="Search candidates, jobs, clients..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Candidates">
+            <CommandItem onSelect={() => { setIsSearchOpen(false); navigate('/candidates'); }}>
+              <Users className="mr-2 h-4 w-4" />
+              <span>Search Candidates</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandGroup heading="Pages">
+            <CommandItem onSelect={() => { setIsSearchOpen(false); navigate('/applications'); }}>
+              <FileText className="mr-2 h-4 w-4" />
+              <span>Applications</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setIsSearchOpen(false); navigate('/clients'); }}>
+              <Building2 className="mr-2 h-4 w-4" />
+              <span>Clients</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setIsSearchOpen(false); navigate('/resume-processing'); }}>
+              <FileText className="mr-2 h-4 w-4" />
+              <span>Resume Processing</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setIsSearchOpen(false); navigate('/settings'); }}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandGroup heading="Database">
+            {databaseItems.map((item) => (
+              <CommandItem key={item.href} onSelect={() => { setIsSearchOpen(false); navigate(item.href); }}>
+                <Table2 className="mr-2 h-4 w-4" />
+                <span>{item.label}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </aside>
   );
 }
