@@ -40,21 +40,6 @@ export function Header({ title, isConnected = true, onSearch, searchComponent }:
         {/* Left: Title */}
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-semibold">{title}</h1>
-          
-          {/* Connection status */}
-          <Badge 
-            variant={isConnected ? "success" : "error"} 
-            className="gap-1.5"
-          >
-            {isConnected ? (
-              <Wifi className="w-3 h-3" />
-            ) : (
-              <WifiOff className="w-3 h-3" />
-            )}
-            <span className="text-[10px] uppercase tracking-wider">
-              {isConnected ? 'Live' : 'Offline'}
-            </span>
-          </Badge>
         </div>
 
         {/* Right: Search & Actions */}
