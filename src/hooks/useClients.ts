@@ -72,8 +72,8 @@ export function useCreateClient() {
     onSuccess: (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Client created successfully');
-      if (createdClient.provisionedCredentials) {
-        const creds = createdClient.provisionedCredentials;
+      const creds = (createdClient as any)?.provisionedCredentials;
+      if (creds) {
         toast.info(
           `Client login created: ${creds.email} / ${creds.password} (${creds.loginUrl})`,
           { duration: 12000 }
