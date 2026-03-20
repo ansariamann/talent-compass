@@ -7,7 +7,6 @@ import {
   GraduationCap,
   Calendar,
   ExternalLink,
-  Edit2,
   Maximize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +38,11 @@ export function CandidateDetailPanel({ candidate, onClose, onOpenFull }: Candida
               <span className="text-xs text-muted-foreground font-mono">
                 {candidate.experience} yrs
               </span>
+              {candidate.company && (
+                <span className="text-xs text-muted-foreground">
+                  {candidate.company}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -110,29 +114,6 @@ export function CandidateDetailPanel({ candidate, onClose, onOpenFull }: Candida
               </div>
             </div>
 
-            {/* Flags */}
-            {candidate.flags.length > 0 && (
-              <div>
-                <h3 className="text-xs font-medium mb-2 uppercase tracking-wide text-muted-foreground">Flags</h3>
-                <div className="space-y-2">
-                  {candidate.flags.map((flag, i) => (
-                    <div 
-                      key={i}
-                      className="p-3 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={flag.type} className="text-xs">{flag.type}</Badge>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {new Date(flag.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{flag.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {(candidate.ctcCurrent || candidate.ctcExpected) && (
               <div>
                 <h3 className="text-xs font-medium mb-2 uppercase tracking-wide text-muted-foreground">CTC</h3>
@@ -157,10 +138,6 @@ export function CandidateDetailPanel({ candidate, onClose, onOpenFull }: Candida
                   Resume
                 </Button>
               )}
-              <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={onOpenFull}>
-                <Edit2 className="w-4 h-4" />
-                Edit
-              </Button>
               <Button variant="glow" size="sm" className="gap-2 flex-1" onClick={onOpenFull}>
                 <ExternalLink className="w-4 h-4" />
                 Full View

@@ -1,28 +1,32 @@
 // Core domain types for the ATS system
 
 export type CandidateStatus =
-  | 'new'
-  | 'screening'
-  | 'submitted'
-  | 'interview_scheduled'
-  | 'interviewed'
-  | 'offered'
-  | 'hired'
-  | 'rejected'
-  | 'withdrawn'
-  | 'on_hold';
+  | "new"
+  | "screening"
+  | "submitted"
+  | "interview_scheduled"
+  | "interviewed"
+  | "offered"
+  | "hired"
+  | "rejected"
+  | "withdrawn"
+  | "on_hold";
 
 export type ApplicationStatus =
-  | 'pending'
-  | 'in_review'
-  | 'shortlisted'
-  | 'interview'
-  | 'offer'
-  | 'accepted'
-  | 'declined'
-  | 'rejected';
+  | "pending"
+  | "in_review"
+  | "shortlisted"
+  | "interview"
+  | "offer"
+  | "accepted"
+  | "declined"
+  | "rejected";
 
-export type UserRole = 'hr_admin' | 'hr_recruiter' | 'client_admin' | 'client_user';
+export type UserRole =
+  | "hr_admin"
+  | "hr_recruiter"
+  | "client_admin"
+  | "client_user";
 
 export interface User {
   id: string;
@@ -42,6 +46,7 @@ export interface Candidate {
   name: string;
   email: string;
   phone?: string;
+  company?: string;
   location?: string;
   presentAddress?: string;
   permanentAddress?: string;
@@ -53,7 +58,9 @@ export interface Candidate {
   currentStatus: CandidateStatus;
   resumeUrl?: string;
   resumeParsed?: ResumeData;
-  flags: CandidateFlag[];
+  isDuplicate?: boolean; // Marked as duplicate (client-side enrichment)
+  duplicateOf?: string; // Primary candidate id if this is a duplicate
+  potentialDuplicates?: string[]; // Candidate ids that might be duplicates
   isBlacklisted: boolean;
   isLeaver: boolean;
   remark?: string;
@@ -84,13 +91,6 @@ export interface WorkExperience {
   startDate: string;
   endDate?: string;
   description: string;
-}
-
-export interface CandidateFlag {
-  type: 'duplicate' | 'incomplete' | 'verified' | 'priority' | 'internal';
-  reason: string;
-  createdAt: string;
-  createdBy: string;
 }
 
 export interface Client {
@@ -153,7 +153,7 @@ export interface Interview {
   applicationId: string;
   scheduledAt: string;
   duration: number; // minutes
-  type: 'phone' | 'video' | 'onsite';
+  type: "phone" | "video" | "onsite";
   interviewers: string[];
   notes?: string;
   feedback?: InterviewFeedback;
@@ -163,7 +163,7 @@ export interface InterviewFeedback {
   rating: 1 | 2 | 3 | 4 | 5;
   strengths: string[];
   concerns: string[];
-  recommendation: 'hire' | 'no_hire' | 'further_review';
+  recommendation: "hire" | "no_hire" | "further_review";
   comments: string;
 }
 
@@ -215,9 +215,20 @@ export interface JobFilters {
   search?: string;
   companyName?: string;
   jobTitle?: string;
+  field?: string;
   location?: string;
   minExperience?: number;
   maxExperience?: number;
+  minSalaryLpa?: number;
+  maxSalaryLpa?: number;
+  sort?:
+    | "newest"
+    | "salary_desc"
+    | "salary_asc"
+    | "exp_desc"
+    | "exp_asc"
+    | "location_asc"
+    | "company_asc";
 }
 
 // Pagination
@@ -231,7 +242,11 @@ export interface PaginatedResponse<T> {
 
 // SSE Event types
 export interface SSEEvent {
-  type: 'candidate_updated' | 'application_updated' | 'status_changed' | 'new_application';
+  type:
+    | "candidate_updated"
+    | "application_updated"
+    | "status_changed"
+    | "new_application";
   payload: unknown;
   timestamp: string;
 }
@@ -253,7 +268,7 @@ export interface CopilotResponse {
 }
 
 // Email Ingestion & Resume Parsing
-export type ResumeJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type ResumeJobStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
 export interface ResumeJob {
   id: string;

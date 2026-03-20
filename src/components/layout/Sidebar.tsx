@@ -4,13 +4,14 @@ import {
   FileText,
   Building2,
   BarChart3,
+  Database,
   Settings,
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  Database,
   Table2,
   LogOut,
+  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ interface DatabaseItem {
 
 const navItems: NavItem[] = [
   { label: 'Candidates', href: '/candidates', icon: Users },
+  { label: 'Jobs', href: '/jobs', icon: Briefcase },
   { label: 'Applications', href: '/applications', icon: FileText },
   { label: 'Processing', href: '/resume-processing', icon: FileText }, // Using FileText for now, or maybe Mail/Inbox
   { label: 'Clients', href: '/clients', icon: Building2 },

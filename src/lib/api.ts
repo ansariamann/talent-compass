@@ -80,6 +80,7 @@ interface BackendCandidate {
   name: string;
   email?: string | null;
   phone?: string | null;
+  company?: string | null;
   location?: string | null;
   present_address?: string | null;
   permanent_address?: string | null;
@@ -129,6 +130,7 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     name: backend.name,
     email: backend.email || '',
     phone: backend.phone || undefined,
+    company: backend.company || undefined,
     location: backend.location || undefined,
     presentAddress: backend.present_address || undefined,
     permanentAddress: backend.permanent_address || undefined,
@@ -140,7 +142,6 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     currentStatus: statusMap[backend.status] || 'new',
     resumeUrl,
     resumeParsed: undefined,
-    flags: [],
     isBlacklisted: backend.status === 'REJECTED',
     isLeaver: backend.status === 'LEFT',
     remark: backend.remark || undefined,
@@ -245,6 +246,7 @@ function transformApplication(backend: BackendApplication): Application {
 }
 
 function transformJob(backend: BackendJob): Job {
+  const salaryLpa = backend.salary_lpa == null ? undefined : Number(backend.salary_lpa);
   return {
     id: backend.id,
     clientId: backend.client_id,
@@ -253,7 +255,7 @@ function transformJob(backend: BackendJob): Job {
     postingDate: backend.posting_date,
     requirements: backend.requirements || undefined,
     experienceRequired: backend.experience_required ?? undefined,
-    salaryLpa: backend.salary_lpa ?? undefined,
+    salaryLpa,
     location: backend.location || undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
@@ -435,7 +437,7 @@ export const applicationsApi = {
       client_id: data.clientId,
       job_title: data.jobTitle,
     };
-    const response = await fetchWithAuth<BackendApplication>('/applications/', {
+    const response = await fetchWithAuth<BackendApplication>('/applications', {
       method: 'POST',
       body: JSON.stringify(backendData),
     });
@@ -526,7 +528,7 @@ export const applicationsApi = {
 
   getByCandidate: async (candidateId: string): Promise<Application[]> => {
     const response = await fetchWithAuth<BackendApplication[]>(
-      `/applications/candidate/${candidateId}`
+      `/candidates/${candidateId}/applications`
     );
     return response.map(transformApplication);
   },
@@ -550,12 +552,21 @@ export const jobsApi = {
     if (filters.search) params.set('search', filters.search);
     if (filters.companyName) params.set('company_name', filters.companyName);
     if (filters.jobTitle) params.set('job_title', filters.jobTitle);
+    if (filters.field) params.set('field', filters.field);
     if (filters.location) params.set('location', filters.location);
     if (filters.minExperience !== undefined) params.set('min_experience', String(filters.minExperience));
     if (filters.maxExperience !== undefined) params.set('max_experience', String(filters.maxExperience));
+    if (filters.minSalaryLpa !== undefined) params.set('min_salary_lpa', String(filters.minSalaryLpa));
+    if (filters.maxSalaryLpa !== undefined) params.set('max_salary_lpa', String(filters.maxSalaryLpa));
+    if (filters.sort) params.set('sort', filters.sort);
 
-    const response = await fetchWithAuth<BackendJob[]>(`/jobs?${params}`);
+    const response = await fetchWithAuth<BackendJob[]>(`/jobs/?${params}`);
     return transformPaginatedResponse(response, transformJob, page, pageSize);
+  },
+
+  get: async (id: string): Promise<Job> => {
+    const response = await fetchWithAuth<BackendJob>(`/jobs/${id}`);
+    return transformJob(response);
   },
 
   create: async (data: {
@@ -576,7 +587,7 @@ export const jobsApi = {
       salary_lpa: data.salaryLpa,
       location: data.location,
     };
-    const response = await fetchWithAuth<BackendJob>('/jobs', {
+    const response = await fetchWithAuth<BackendJob>('/jobs/', {
       method: 'POST',
       body: JSON.stringify(backendData),
     });
@@ -632,22 +643,22 @@ export const emailApi = {
     });
     if (status) params.set('status', status);
 
-    const response = await fetchWithAuth<ResumeJob[]>(`/email/jobs?${params}`);
+    const response = await fetchWithAuth<ResumeJob[]>(`/email/tasks?${params}`);
     return transformPaginatedResponse(response, (job) => job, page, pageSize);
   },
 
   getJob: async (id: string): Promise<ResumeJob> => {
-    return fetchWithAuth<ResumeJob>(`/email/jobs/${id}`);
+    return fetchWithAuth<ResumeJob>(`/email/tasks/${id}`);
   },
 
   parseJob: async (id: string): Promise<ParseJobResponse> => {
-    return fetchWithAuth<ParseJobResponse>(`/email/jobs/${id}/parse`, {
+    return fetchWithAuth<ParseJobResponse>(`/email/tasks/${id}/parse`, {
       method: 'POST',
     });
   },
 
   retryJob: async (id: string): Promise<ResumeJob> => {
-    return fetchWithAuth<ResumeJob>(`/email/jobs/${id}/retry`, {
+    return fetchWithAuth<ResumeJob>(`/email/tasks/${id}/retry`, {
       method: 'POST',
     });
   }
@@ -686,7 +697,7 @@ function toFrontendClient(backend: BackendClient): Client {
 export const clientsApi = {
   list: async (): Promise<Client[]> => {
     try {
-      const response = await fetchWithAuth<BackendClient[]>('/clients');
+      const response = await fetchWithAuth<BackendClient[]>('/clients/');
       if (!Array.isArray(response)) {
         return [];
       }
@@ -707,7 +718,7 @@ export const clientsApi = {
     const emailDomain = data.contactEmail?.includes('@')
       ? data.contactEmail.split('@')[1]
       : undefined;
-    const response = await fetchWithAuth<BackendClientProvisionResponse>('/clients', {
+    const response = await fetchWithAuth<BackendClientProvisionResponse>('/clients/', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,

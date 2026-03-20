@@ -17,6 +17,8 @@ import ClientsPage from "./pages/ClientsPage";
 import DatabasePage from "./pages/DatabasePage";
 import MonitoringPage from "./pages/MonitoringPage";
 import SettingsPage from "./pages/SettingsPage";
+import JobsPage from "./pages/JobsPage";
+import JobDetailPage from "./pages/JobDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,8 @@ const App = () => (
             <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
             <Route path="/database/:table" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/jobs" element={<ProtectedRoute><JobsPage /></ProtectedRoute>} />
+            <Route path="/jobs/:id" element={<ProtectedRoute><JobDetailPage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

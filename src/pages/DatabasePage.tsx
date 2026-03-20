@@ -2,10 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { candidatesApi, applicationsApi, clientsApi, monitoringApi } from '@/lib/api';
-import { ResumeUploadDialog } from '@/components/ResumeUploadDialog';
 import {
   Table2,
-  Plus,
   Search,
   Filter,
   Download,
@@ -47,8 +45,7 @@ export default function DatabasePage() {
   const [tablesData, setTablesData] = useState<Record<string, TableData>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [dbSource, setDbSource] = useState<DatabaseSourceInfo | null>(null);
+    const [dbSource, setDbSource] = useState<DatabaseSourceInfo | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -192,10 +189,6 @@ export default function DatabasePage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button variant="glow" size="sm" onClick={() => setIsUploadOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Record
-            </Button>
           </div>
         </div>
 
@@ -307,11 +300,6 @@ export default function DatabasePage() {
         )}
       </div>
 
-      <ResumeUploadDialog
-        open={isUploadOpen}
-        onOpenChange={setIsUploadOpen}
-        onSuccess={fetchData}
-      />
     </DashboardLayout>
   );
 }

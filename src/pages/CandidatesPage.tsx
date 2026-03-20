@@ -1,23 +1,34 @@
-import { useState, useEffect, useMemo } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { CandidateTable } from '@/components/candidates/CandidateTable';
-import { CandidateFilters } from '@/components/candidates/CandidateFilters';
-import { CandidateDetailPanel } from '@/components/candidates/CandidateDetailPanel';
-import { CandidateDetailModal } from '@/components/candidates/CandidateDetailModal';
-import { EnhancedSearch } from '@/components/search/EnhancedSearch';
-import { BulkActionsToolbar } from '@/components/candidates/BulkActionsToolbar';
-import { SubmitApplicationModal } from '@/components/candidates/SubmitApplicationModal';
-import { useCandidates, useUpdateCandidate } from '@/hooks/useCandidates';
-import { useClients } from '@/hooks/useClients';
-import { Loader2, AlertCircle } from 'lucide-react';
-import type { Candidate, CandidateFilters as CandidateFiltersType, CandidateStatus } from '@/types/ats';
+import { useState, useEffect, useMemo } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { CandidateTable } from "@/components/candidates/CandidateTable";
+import { CandidateFilters } from "@/components/candidates/CandidateFilters";
+import { CandidateDetailPanel } from "@/components/candidates/CandidateDetailPanel";
+import { CandidateDetailModal } from "@/components/candidates/CandidateDetailModal";
+import { EnhancedSearch } from "@/components/search/EnhancedSearch";
+import { BulkActionsToolbar } from "@/components/candidates/BulkActionsToolbar";
+import { SubmitApplicationModal } from "@/components/candidates/SubmitApplicationModal";
+import { MergeCandidatesModal } from "@/components/candidates/MergeCandidatesModal";
+import { useCandidates, useUpdateCandidate } from "@/hooks/useCandidates";
+import { useClients } from "@/hooks/useClients";
+import { enrichCandidatesWithDuplicateInfo } from "@/lib/duplicateDetection";
+import { Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import type {
+  Candidate,
+  CandidateFilters as CandidateFiltersType,
+  CandidateStatus,
+} from "@/types/ats";
 
 export default function CandidatesPage() {
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
+    null
+  );
   const [modalCandidate, setModalCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [candidatesToMerge, setCandidatesToMerge] = useState<Candidate[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<CandidateFiltersType>({
@@ -30,12 +41,8 @@ export default function CandidatesPage() {
     data: candidatesResponse,
     isLoading,
     error,
-    refetch
-  } = useCandidates(
-    { ...filters, search: searchQuery },
-    page,
-    25
-  );
+    refetch,
+  } = useCandidates({ ...filters, search: searchQuery }, page, 25);
 
   // Fetch clients for filters and assignment
   const { data: clients = [] } = useClients();
@@ -51,14 +58,16 @@ export default function CandidatesPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + K to focus search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        const searchInput = document.querySelector('[data-search-input]') as HTMLInputElement;
+        const searchInput = document.querySelector(
+          "[data-search-input]"
+        ) as HTMLInputElement;
         searchInput?.focus();
       }
 
       // Escape to close panels/modal (priority: modal > detail panel)
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         if (isModalOpen) {
           setIsModalOpen(false);
@@ -69,8 +78,8 @@ export default function CandidatesPage() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedCandidate, isModalOpen]);
 
   // Filter candidates locally only for toggles not supported by backend query params.
@@ -79,19 +88,20 @@ export default function CandidatesPage() {
 
     // Apply local filters that aren't handled by API
     if (filters.excludeBlacklisted) {
-      result = result.filter(c => !c.isBlacklisted);
+      result = result.filter((c) => !c.isBlacklisted);
     }
 
     if (filters.excludeLeavers) {
-      result = result.filter(c => !c.isLeaver);
+      result = result.filter((c) => !c.isLeaver);
     }
 
-    return result;
+    // Enrich with duplicate detection info
+    return enrichCandidatesWithDuplicateInfo(result);
   }, [candidates, filters]);
 
   // Get selected candidates for bulk actions
   const selectedCandidates = useMemo(() => {
-    return filteredCandidates.filter(c => selectedIds.includes(c.id));
+    return filteredCandidates.filter((c) => selectedIds.includes(c.id));
   }, [filteredCandidates, selectedIds]);
 
   const handleOpenDetail = (candidate: Candidate) => {
@@ -112,7 +122,10 @@ export default function CandidatesPage() {
     setSelectedIds([]);
   };
 
-  const handleBulkStatusChange = async (candidateIds: string[], status: CandidateStatus) => {
+  const handleBulkStatusChange = async (
+    candidateIds: string[],
+    status: CandidateStatus
+  ) => {
     // Update each candidate via API
     for (const id of candidateIds) {
       await updateCandidateMutation.mutateAsync({
@@ -124,9 +137,55 @@ export default function CandidatesPage() {
     refetch();
   };
 
-  const handleBulkAssignToClient = (_candidateIds: string[], _clientId: string) => {
+  const handleBulkAssignToClient = (
+    _candidateIds: string[],
+    _clientId: string
+  ) => {
     // Handled via SubmitApplicationModal
     setIsSubmitModalOpen(true);
+  };
+
+  const handleMergeDuplicates = (candidateIds: string[]) => {
+    const toMerge = filteredCandidates.filter((c) =>
+      candidateIds.includes(c.id)
+    );
+    if (toMerge.length < 2) {
+      toast.error("Select at least 2 candidates to merge");
+      return;
+    }
+    setCandidatesToMerge(toMerge);
+    setIsMergeModalOpen(true);
+  };
+
+  const handleMergeConfirm = async (
+    primaryId: string,
+    secondaryIds: string[]
+  ) => {
+    // Call merge API endpoint - this would be integrated with your backend
+    try {
+      // Update candidates in state
+      for (const secondaryId of secondaryIds) {
+        await updateCandidateMutation.mutateAsync({
+          id: secondaryId,
+          data: {
+            isDuplicate: true,
+            duplicateOf: primaryId,
+          },
+        });
+      }
+
+      refetch();
+      setSelectedIds([]);
+      toast.success(
+        `Successfully merged ${secondaryIds.length} candidate${
+          secondaryIds.length > 1 ? "s" : ""
+        }`
+      );
+    } catch (error) {
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to merge candidates");
+    }
   };
 
   const SearchComponent = null;
@@ -152,9 +211,12 @@ export default function CandidatesPage() {
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="flex flex-col items-center gap-4 text-center">
             <AlertCircle className="w-8 h-8 text-destructive" />
-            <p className="text-destructive font-medium">Failed to load candidates</p>
+            <p className="text-destructive font-medium">
+              Failed to load candidates
+            </p>
             <p className="text-sm text-muted-foreground max-w-md">
-              {error.message || 'An unexpected error occurred. Please try again.'}
+              {error.message ||
+                "An unexpected error occurred. Please try again."}
             </p>
             <button
               onClick={() => refetch()}
@@ -199,6 +261,7 @@ export default function CandidatesPage() {
                 onClearSelection={handleClearSelection}
                 onStatusChange={handleBulkStatusChange}
                 onAssignToClient={() => setIsSubmitModalOpen(true)}
+                onMergeDuplicates={handleMergeDuplicates}
               />
             </div>
           )}
@@ -218,11 +281,12 @@ export default function CandidatesPage() {
           {candidatesResponse && candidatesResponse.totalPages > 1 && (
             <div className="shrink-0 p-4 border-t border-border flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Showing {filteredCandidates.length} of {candidatesResponse.total} candidates
+                Showing {filteredCandidates.length} of{" "}
+                {candidatesResponse.total} candidates
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
                 >
@@ -232,7 +296,11 @@ export default function CandidatesPage() {
                   Page {page} of {candidatesResponse.totalPages}
                 </span>
                 <button
-                  onClick={() => setPage(p => Math.min(candidatesResponse.totalPages, p + 1))}
+                  onClick={() =>
+                    setPage((p) =>
+                      Math.min(candidatesResponse.totalPages, p + 1)
+                    )
+                  }
                   disabled={page === candidatesResponse.totalPages}
                   className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
                 >
@@ -277,6 +345,13 @@ export default function CandidatesPage() {
         }}
       />
 
+      {/* Merge Candidates Modal */}
+      <MergeCandidatesModal
+        candidates={candidatesToMerge}
+        open={isMergeModalOpen}
+        onOpenChange={setIsMergeModalOpen}
+        onMerge={handleMergeConfirm}
+      />
     </DashboardLayout>
   );
 }

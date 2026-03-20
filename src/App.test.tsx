@@ -1,11 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import App from './App';
-import { describe, it, expect } from 'vitest';
 
-describe('App', () => {
-    it('renders without crashing', () => {
-        render(<App />);
-        // Basic check that something rendered
-        expect(document.body).toBeInTheDocument();
-    });
+test('App mounts without crashing', () => {
+  render(<App />);
 });

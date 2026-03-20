@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { 
-  X, 
-  Download, 
-  UserPlus, 
-  RefreshCw, 
+import { useState } from "react";
+import {
+  X,
+  Download,
+  UserPlus,
+  RefreshCw,
   ChevronDown,
   FileSpreadsheet,
   FileJson,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  Copy,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +17,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
-import type { Candidate, CandidateStatus, Client } from '@/types/ats';
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import type { Candidate, CandidateStatus, Client } from "@/types/ats";
 
 interface BulkActionsToolbarProps {
   selectedCandidates: Candidate[];
@@ -26,19 +27,28 @@ interface BulkActionsToolbarProps {
   onClearSelection: () => void;
   onStatusChange: (candidateIds: string[], status: CandidateStatus) => void;
   onAssignToClient: () => void;
+  onMergeDuplicates?: (candidateIds: string[]) => void;
 }
 
-const statusOptions: { value: CandidateStatus; label: string; color: string }[] = [
-  { value: 'new', label: 'New', color: 'bg-status-info' },
-  { value: 'screening', label: 'Screening', color: 'bg-status-pending' },
-  { value: 'submitted', label: 'Submitted', color: 'bg-status-warning' },
-  { value: 'interview_scheduled', label: 'Interview Scheduled', color: 'bg-status-warning' },
-  { value: 'interviewed', label: 'Interviewed', color: 'bg-status-warning' },
-  { value: 'offered', label: 'Offered', color: 'bg-primary' },
-  { value: 'hired', label: 'Hired', color: 'bg-status-success' },
-  { value: 'rejected', label: 'Rejected', color: 'bg-status-error' },
-  { value: 'withdrawn', label: 'Withdrawn', color: 'bg-muted-foreground' },
-  { value: 'on_hold', label: 'On Hold', color: 'bg-muted-foreground' },
+const statusOptions: {
+  value: CandidateStatus;
+  label: string;
+  color: string;
+}[] = [
+  { value: "new", label: "New", color: "bg-status-info" },
+  { value: "screening", label: "Screening", color: "bg-status-pending" },
+  { value: "submitted", label: "Submitted", color: "bg-status-warning" },
+  {
+    value: "interview_scheduled",
+    label: "Interview Scheduled",
+    color: "bg-status-warning",
+  },
+  { value: "interviewed", label: "Interviewed", color: "bg-status-warning" },
+  { value: "offered", label: "Offered", color: "bg-primary" },
+  { value: "hired", label: "Hired", color: "bg-status-success" },
+  { value: "rejected", label: "Rejected", color: "bg-status-error" },
+  { value: "withdrawn", label: "Withdrawn", color: "bg-muted-foreground" },
+  { value: "on_hold", label: "On Hold", color: "bg-muted-foreground" },
 ];
 
 export function BulkActionsToolbar({
@@ -47,60 +57,70 @@ export function BulkActionsToolbar({
   onClearSelection,
   onStatusChange,
   onAssignToClient,
+  onMergeDuplicates,
 }: BulkActionsToolbarProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const count = selectedCandidates.length;
 
-  const handleExport = async (format: 'csv' | 'json') => {
+  const handleExport = async (format: "csv" | "json") => {
     setIsExporting(true);
     try {
       // Simulate export - in real app, this would call backend API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const data = selectedCandidates.map(c => ({
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const data = selectedCandidates.map((c) => ({
         name: c.name,
         email: c.email,
         phone: c.phone,
-        skills: c.skills.join(', '),
+        skills: c.skills.join(", "),
         experience: c.experience,
         status: c.currentStatus,
       }));
 
-      if (format === 'csv') {
-        const headers = Object.keys(data[0]).join(',');
-        const rows = data.map(row => Object.values(row).join(',')).join('\n');
+      if (format === "csv") {
+        const headers = Object.keys(data[0]).join(",");
+        const rows = data.map((row) => Object.values(row).join(",")).join("\n");
         const csv = `${headers}\n${rows}`;
-        
-        const blob = new Blob([csv], { type: 'text/csv' });
+
+        const blob = new Blob([csv], { type: "text/csv" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `candidates-export-${Date.now()}.csv`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
         const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
+        const blob = new Blob([json], { type: "application/json" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `candidates-export-${Date.now()}.json`;
         a.click();
         URL.revokeObjectURL(url);
       }
-      
-      toast.success(`Exported ${count} candidate${count > 1 ? 's' : ''} as ${format.toUpperCase()}`);
+
+      toast.success(
+        `Exported ${count} candidate${
+          count > 1 ? "s" : ""
+        } as ${format.toUpperCase()}`
+      );
     } catch {
-      toast.error('Export failed. Please try again.');
+      toast.error("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleStatusChange = (status: CandidateStatus) => {
-    onStatusChange(selectedCandidates.map(c => c.id), status);
-    toast.success(`Updated status of ${count} candidate${count > 1 ? 's' : ''} to ${status}`);
+    onStatusChange(
+      selectedCandidates.map((c) => c.id),
+      status
+    );
+    toast.success(
+      `Updated status of ${count} candidate${count > 1 ? "s" : ""} to ${status}`
+    );
   };
 
   const handleAssignToClient = () => {
@@ -116,7 +136,7 @@ export function BulkActionsToolbar({
           {count}
         </div>
         <span className="text-sm font-medium">
-          candidate{count > 1 ? 's' : ''} selected
+          candidate{count > 1 ? "s" : ""} selected
         </span>
       </div>
 
@@ -134,11 +154,11 @@ export function BulkActionsToolbar({
         <DropdownMenuContent align="start">
           <DropdownMenuLabel>Export Format</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleExport('csv')}>
+          <DropdownMenuItem onClick={() => handleExport("csv")}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Export as CSV
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExport('json')}>
+          <DropdownMenuItem onClick={() => handleExport("json")}>
             <FileJson className="w-4 h-4 mr-2" />
             Export as JSON
           </DropdownMenuItem>
@@ -150,6 +170,19 @@ export function BulkActionsToolbar({
         <UserPlus className="w-4 h-4 mr-2" />
         Submit to Client
       </Button>
+
+      {/* Merge Duplicates */}
+      {onMergeDuplicates && count >= 2 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onMergeDuplicates(selectedCandidates.map((c) => c.id))}
+          title="Merge selected candidates if they are duplicates"
+        >
+          <Copy className="w-4 h-4 mr-2" />
+          Merge Duplicates
+        </Button>
+      )}
 
       {/* Change Status dropdown */}
       <DropdownMenu>
@@ -163,8 +196,8 @@ export function BulkActionsToolbar({
         <DropdownMenuContent align="start">
           <DropdownMenuLabel>New Status</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {statusOptions.map(status => (
-            <DropdownMenuItem 
+          {statusOptions.map((status) => (
+            <DropdownMenuItem
               key={status.value}
               onClick={() => handleStatusChange(status.value)}
             >
@@ -180,9 +213,9 @@ export function BulkActionsToolbar({
       <div className="flex-1" />
 
       {/* Clear selection */}
-      <Button 
-        variant="ghost" 
-        size="sm" 
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onClearSelection}
         className="text-muted-foreground hover:text-foreground"
       >
