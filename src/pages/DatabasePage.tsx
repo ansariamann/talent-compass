@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { candidatesApi, applicationsApi, clientsApi, monitoringApi } from '@/lib/api';
+import { candidatesApi, applicationsApi, clientsApi, monitoringApi, jobsApi } from '@/lib/api';
 import {
   Table2,
   Search,
@@ -52,10 +52,11 @@ export default function DatabasePage() {
     setError(null);
 
     try {
-      const [candidatesRes, applicationsRes, clientsList, dbSourceRes] = await Promise.allSettled([
+      const [candidatesRes, applicationsRes, clientsList, jobsRes, dbSourceRes] = await Promise.allSettled([
         candidatesApi.list({}, 1, 100),
         applicationsApi.list({}, 1, 100),
         clientsApi.list(),
+        jobsApi.list({}, 1, 100),
         monitoringApi.getDatabaseSource(),
       ]);
 
@@ -118,11 +119,26 @@ export default function DatabasePage() {
         data.clients = { columns: ['Error'], rows: [['Failed to load clients: ' + clientsList.reason]] };
       }
 
-      // Jobs & Interviews — no backend endpoint yet
-      data.jobs = {
-        columns: ['ID', 'Title', 'Client ID', 'Status', 'Openings', 'Created At'],
-        rows: [],
-      };
+      // Jobs
+      if (jobsRes.status === 'fulfilled') {
+        const jobs = jobsRes.value.data;
+        data.jobs = {
+          columns: ['ID', 'Title', 'Company / Client', 'Experience', 'Salary (LPA)', 'Location', 'Created At'],
+          rows: jobs.map(j => [
+            j.id,
+            j.title,
+            j.companyName || j.clientId || '-',
+            j.experienceRequired !== undefined ? `${j.experienceRequired} yrs` : '-',
+            j.salaryLpa !== undefined ? j.salaryLpa.toString() : '-',
+            j.location || '-',
+            j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '-',
+          ]),
+        };
+      } else {
+        data.jobs = { columns: ['Error'], rows: [['Failed to load jobs: ' + jobsRes.reason]] };
+      }
+
+      // Interviews — no backend endpoint yet
       data.interviews = {
         columns: ['ID', 'Application ID', 'Type', 'Scheduled', 'Duration', 'Status'],
         rows: [],
@@ -159,6 +175,23 @@ export default function DatabasePage() {
     );
   }, [currentTable.rows, searchQuery]);
 
+  const handleExport = useCallback(() => {
+    if (!currentTable || currentTable.columns.length === 0 || filteredRows.length === 0) return;
+    const header = currentTable.columns.join(',');
+    const csvRows = filteredRows.map(row => 
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    );
+    const csvString = [header, ...csvRows].join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${tableName}_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [currentTable, filteredRows, tableName]);
+
   return (
     <DashboardLayout title={`Database: ${tableName}`}>
       <div className="p-6 space-y-6">
@@ -185,7 +218,7 @@ export default function DatabasePage() {
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>

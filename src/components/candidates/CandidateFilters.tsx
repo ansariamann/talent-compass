@@ -19,6 +19,7 @@ const statusOptions: { value: CandidateStatus; label: string }[] = [
   { value: 'interview_scheduled', label: 'Interview Scheduled' },
   { value: 'interviewed', label: 'Interviewed' },
   { value: 'offered', label: 'Offered' },
+  { value: 'selected', label: 'Selected' },
   { value: 'hired', label: 'Hired' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'withdrawn', label: 'Withdrawn' },

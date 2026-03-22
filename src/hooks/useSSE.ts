@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SSEEvent {
   type: string;
@@ -35,14 +35,21 @@ export function useSSE(options: UseSSEOptions = {}) {
       eventSourceRef.current.close();
     }
 
-    const apiBase = import.meta.env.VITE_API_URL || '/api';
-    const eventSource = new EventSource(`${apiBase}/events/stream`);
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const token = localStorage.getItem("auth_token");
+
+    // EventSource doesn't support custom headers, so we pass token as query parameter
+    const url = token
+      ? `${apiBase}/sse/events?token=${encodeURIComponent(token)}`
+      : `${apiBase}/sse/events`;
+
+    const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
-      console.log('[SSE] Connected');
+      console.log("[SSE] Connected");
     };
 
     eventSource.onmessage = (event) => {
@@ -53,20 +60,20 @@ export function useSSE(options: UseSSEOptions = {}) {
 
         // Invalidate relevant queries based on event type
         switch (data.type) {
-          case 'candidate_updated':
-            queryClient.invalidateQueries({ queryKey: ['candidates'] });
+          case "candidate_updated":
+            queryClient.invalidateQueries({ queryKey: ["candidates"] });
             break;
-          case 'application_updated':
-          case 'status_changed':
-            queryClient.invalidateQueries({ queryKey: ['applications'] });
+          case "application_updated":
+          case "status_changed":
+            queryClient.invalidateQueries({ queryKey: ["applications"] });
             break;
-          case 'new_application':
-            queryClient.invalidateQueries({ queryKey: ['applications'] });
-            queryClient.invalidateQueries({ queryKey: ['candidates'] });
+          case "new_application":
+            queryClient.invalidateQueries({ queryKey: ["applications"] });
+            queryClient.invalidateQueries({ queryKey: ["candidates"] });
             break;
         }
       } catch (e) {
-        console.error('[SSE] Failed to parse event:', e);
+        console.error("[SSE] Failed to parse event:", e);
       }
     };
 
@@ -79,12 +86,12 @@ export function useSSE(options: UseSSEOptions = {}) {
         console.log(
           `[SSE] Reconnecting... attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`
         );
-        
+
         reconnectTimeoutRef.current = setTimeout(() => {
           connect();
         }, reconnectInterval);
       } else {
-        console.error('[SSE] Max reconnect attempts reached');
+        console.error("[SSE] Max reconnect attempts reached");
       }
     };
   }, [onEvent, queryClient, reconnectInterval, maxReconnectAttempts]);

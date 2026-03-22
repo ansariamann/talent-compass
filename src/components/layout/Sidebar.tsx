@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Users,
   FileText,
@@ -12,16 +12,17 @@ import {
   Table2,
   LogOut,
   Briefcase,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+  Activity,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { useAuth } from '@/contexts/AuthContext';
+} from "@/components/ui/collapsible";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   label: string;
@@ -37,19 +38,21 @@ interface DatabaseItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Candidates', href: '/candidates', icon: Users },
-  { label: 'Jobs', href: '/jobs', icon: Briefcase },
-  { label: 'Applications', href: '/applications', icon: FileText },
-  { label: 'Processing', href: '/resume-processing', icon: FileText }, // Using FileText for now, or maybe Mail/Inbox
-  { label: 'Clients', href: '/clients', icon: Building2 },
+  { label: "Candidates", href: "/candidates", icon: Users },
+  { label: "Direct Interview", href: "/direct-interview", icon: FileText },
+  { label: "Jobs", href: "/jobs", icon: Briefcase },
+  { label: "Applications", href: "/applications", icon: FileText },
+  { label: "Processing", href: "/resume-processing", icon: FileText }, // Using FileText for now, or maybe Mail/Inbox
+  { label: "Clients", href: "/clients", icon: Building2 },
+  { label: "Activity Logs", href: "/activity-logs", icon: Activity },
 ];
 
 const databaseItems: DatabaseItem[] = [
-  { label: 'Candidates', href: '/database/candidates' },
-  { label: 'Applications', href: '/database/applications' },
-  { label: 'Clients', href: '/database/clients' },
-  { label: 'Jobs', href: '/database/jobs' },
-  { label: 'Interviews', href: '/database/interviews' },
+  { label: "Candidates", href: "/database/candidates" },
+  { label: "Applications", href: "/database/applications" },
+  { label: "Clients", href: "/database/clients" },
+  { label: "Jobs", href: "/database/jobs" },
+  { label: "Interviews", href: "/database/interviews" },
 ];
 
 export function Sidebar() {
@@ -61,12 +64,17 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const userInitials = user?.name
-    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || 'U';
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || "U";
   return (
     <aside
       className={cn(
@@ -79,12 +87,17 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="h-14 flex items-center px-4 border-b border-white/10 relative z-10">
-        <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+        <NavLink
+          to="/"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+        >
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-vibrant-purple flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-shadow">
             <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
-            <span className="font-semibold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">TalentFlow</span>
+            <span className="font-semibold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              TalentFlow
+            </span>
           )}
         </NavLink>
       </div>
@@ -109,11 +122,15 @@ export function Sidebar() {
               {isActive && (
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
               )}
-              <Icon className={cn(
-                "w-5 h-5 shrink-0 relative z-10 transition-colors",
-                isActive ? "text-primary" : "group-hover:text-primary/80"
-              )} />
-              {!isCollapsed && <span className="relative z-10">{item.label}</span>}
+              <Icon
+                className={cn(
+                  "w-5 h-5 shrink-0 relative z-10 transition-colors",
+                  isActive ? "text-primary" : "group-hover:text-primary/80"
+                )}
+              />
+              {!isCollapsed && (
+                <span className="relative z-10">{item.label}</span>
+              )}
               {!isCollapsed && item.badge && (
                 <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full relative z-10 backdrop-blur-sm">
                   {item.badge}
@@ -125,15 +142,21 @@ export function Sidebar() {
 
         {/* Master Database Section */}
         {!isCollapsed ? (
-          <Collapsible open={isDatabaseOpen} onOpenChange={setIsDatabaseOpen} className="mt-4">
+          <Collapsible
+            open={isDatabaseOpen}
+            onOpenChange={setIsDatabaseOpen}
+            className="mt-4"
+          >
             <CollapsibleTrigger asChild>
               <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm transition-all duration-200">
                 <Database className="w-5 h-5 shrink-0" />
                 <span>Master Database (PostgreSQL)</span>
-                <ChevronRight className={cn(
-                  "w-4 h-4 ml-auto transition-transform duration-200",
-                  isDatabaseOpen && "rotate-90"
-                )} />
+                <ChevronRight
+                  className={cn(
+                    "w-4 h-4 ml-auto transition-transform duration-200",
+                    isDatabaseOpen && "rotate-90"
+                  )}
+                />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4 space-y-1 mt-1">
@@ -153,10 +176,12 @@ export function Sidebar() {
                     {isActive && (
                       <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-vibrant-purple/10 opacity-50" />
                     )}
-                    <Table2 className={cn(
-                      "w-4 h-4 shrink-0 relative z-10",
-                      isActive && "text-primary"
-                    )} />
+                    <Table2
+                      className={cn(
+                        "w-4 h-4 shrink-0 relative z-10",
+                        isActive && "text-primary"
+                      )}
+                    />
                     <span className="relative z-10">{item.label}</span>
                     {item.count !== undefined && (
                       <span className="ml-auto text-xs text-muted-foreground font-mono relative z-10">
@@ -173,7 +198,7 @@ export function Sidebar() {
             to="/database"
             className={cn(
               "flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-              location.pathname.startsWith('/database')
+              location.pathname.startsWith("/database")
                 ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
                 : "text-foreground/70 hover:text-foreground hover:bg-white/5"
             )}
@@ -189,18 +214,20 @@ export function Sidebar() {
           to="/settings"
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
-            location.pathname === '/settings'
+            location.pathname === "/settings"
               ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
               : "text-foreground/70 hover:text-foreground hover:bg-white/5"
           )}
         >
-          {location.pathname === '/settings' && (
+          {location.pathname === "/settings" && (
             <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
           )}
-          <Settings className={cn(
-            "w-5 h-5 shrink-0 relative z-10",
-            location.pathname === '/settings' && "text-primary"
-          )} />
+          <Settings
+            className={cn(
+              "w-5 h-5 shrink-0 relative z-10",
+              location.pathname === "/settings" && "text-primary"
+            )}
+          />
           {!isCollapsed && <span className="relative z-10">Settings</span>}
         </NavLink>
 

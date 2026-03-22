@@ -8,6 +8,7 @@ const candidateStatusConfig: Record<CandidateStatus, { label: string; variant: '
   interview_scheduled: { label: 'Interview Scheduled', variant: 'warning' },
   interviewed: { label: 'Interviewed', variant: 'warning' },
   offered: { label: 'Offered', variant: 'success' },
+  selected: { label: 'Selected', variant: 'success' },
   hired: { label: 'Hired', variant: 'success' },
   rejected: { label: 'Rejected', variant: 'error' },
   withdrawn: { label: 'Withdrawn', variant: 'neutral' },

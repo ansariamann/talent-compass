@@ -7,6 +7,7 @@ export type CandidateStatus =
   | "interview_scheduled"
   | "interviewed"
   | "offered"
+  | "selected"
   | "hired"
   | "rejected"
   | "withdrawn"
@@ -66,6 +67,7 @@ export interface Candidate {
   remark?: string;
   ctcCurrent?: number;
   ctcExpected?: number;
+  isDirectInterview?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -187,6 +189,7 @@ export interface CandidateFilters {
   skills?: string[];
   location?: string;
   status?: CandidateStatus[];
+  isDirectInterview?: boolean;
   clientId?: string;
   minExperience?: number;
   maxExperience?: number;
@@ -198,6 +201,25 @@ export interface CandidateFilters {
   dateTo?: string;
   excludeBlacklisted?: boolean;
   excludeLeavers?: boolean;
+}
+
+export interface DirectInterviewStats {
+  pending: number;
+  interviewed: number;
+  selected: number;
+}
+
+export interface DirectInterviewRecord {
+  id: string;
+  candidateId: string;
+  clientId: string;
+  companyId: string;
+  interviewerId: string;
+  interviewDate: string;
+  notes?: string;
+  rating?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApplicationFilters {

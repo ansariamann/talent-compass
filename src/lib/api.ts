@@ -17,7 +17,20 @@ import type {
   ParseJobResponse,
   Job,
   JobFilters,
+  DirectInterviewStats,
+  DirectInterviewRecord,
 } from '@/types/ats';
+
+export interface ActivityLog {
+  id: string;
+  client_id?: string;
+  user_id?: string;
+  user_name?: string;
+  action_type: string;
+  entity_id?: string;
+  details?: Record<string, any>;
+  created_at: string;
+}
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -94,6 +107,7 @@ interface BackendCandidate {
   resume_url?: string | null;
   resume_file_path?: string | null;
   status: string;
+  is_direct_interview?: boolean | null;
   remark?: string | null;
   candidate_hash?: string | null;
   created_at: string;
@@ -106,6 +120,7 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     'ACTIVE': 'new',
     'INACTIVE': 'on_hold',
     'LEFT': 'withdrawn',
+    'SELECTED': 'selected',
     'HIRED': 'hired',
     'REJECTED': 'rejected',
   };
@@ -147,6 +162,7 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     remark: backend.remark || undefined,
     ctcCurrent,
     ctcExpected,
+    isDirectInterview: Boolean(backend.is_direct_interview),
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
   };
@@ -161,6 +177,7 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
     'interview_scheduled': 'ACTIVE',
     'interviewed': 'ACTIVE',
     'offered': 'ACTIVE',
+    'selected': 'SELECTED',
     'hired': 'HIRED',
     'rejected': 'REJECTED',
     'withdrawn': 'LEFT',
@@ -181,6 +198,7 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.skills !== undefined) result.skills = { skills: frontend.skills };
   if (frontend.experience !== undefined) result.experience = { years: frontend.experience };
   if (frontend.currentStatus !== undefined) result.status = statusMap[frontend.currentStatus] || 'ACTIVE';
+  if (frontend.isDirectInterview !== undefined) result.is_direct_interview = frontend.isDirectInterview;
   if (frontend.remark !== undefined) result.remark = frontend.remark;
   if (frontend.ctcCurrent !== undefined) result.ctc_current = frontend.ctcCurrent;
   if (frontend.ctcExpected !== undefined) result.ctc_expected = frontend.ctcExpected;
@@ -212,6 +230,19 @@ interface BackendJob {
   experience_required?: number | null;
   salary_lpa?: number | null;
   location?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BackendDirectInterviewRecord {
+  id: string;
+  candidate_id: string;
+  client_id: string;
+  company_id: string;
+  interviewer_id: string;
+  interview_date: string;
+  notes?: string | null;
+  rating?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -262,6 +293,21 @@ function transformJob(backend: BackendJob): Job {
   };
 }
 
+function transformDirectInterviewRecord(backend: BackendDirectInterviewRecord): DirectInterviewRecord {
+  return {
+    id: backend.id,
+    candidateId: backend.candidate_id,
+    clientId: backend.client_id,
+    companyId: backend.company_id,
+    interviewerId: backend.interviewer_id,
+    interviewDate: backend.interview_date,
+    notes: backend.notes || undefined,
+    rating: backend.rating ?? undefined,
+    createdAt: backend.created_at,
+    updatedAt: backend.updated_at,
+  };
+}
+
 // Backend list response transformer
 interface BackendListResponse<T> {
   items?: T[];
@@ -307,6 +353,14 @@ function transformPaginatedResponse<B, F>(
 export const authApi = {
   getCurrentUser: () => fetchWithAuth<User>('/auth/me'),
   logout: () => fetchWithAuth<void>('/auth/logout', { method: 'POST' }),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    fetchWithAuth<{ status: string }>('/auth/password/change', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: data.currentPassword,
+        new_password: data.newPassword,
+      }),
+    }),
 };
 
 // Candidates
@@ -321,6 +375,7 @@ export const candidatesApi = {
     if (filters.search) params.set('name_pattern', filters.search);
     if (filters.skills?.length) params.set('skills', filters.skills.join(','));
     if (filters.location) params.set('location', filters.location);
+    if (filters.isDirectInterview !== undefined) params.set('is_direct_interview', String(filters.isDirectInterview));
     if (filters.minExperience !== undefined) params.set('min_experience', String(filters.minExperience));
     if (filters.maxExperience !== undefined) params.set('max_experience', String(filters.maxExperience));
     if (filters.minCtcCurrent !== undefined) params.set('min_ctc_current', String(filters.minCtcCurrent));
@@ -331,7 +386,7 @@ export const candidatesApi = {
       // Map frontend statuses to backend
       const backendStatuses = filters.status.map(s => {
         const map: Record<string, string> = {
-          'new': 'ACTIVE', 'hired': 'HIRED', 'rejected': 'REJECTED',
+          'new': 'ACTIVE', 'selected': 'SELECTED', 'hired': 'HIRED', 'rejected': 'REJECTED',
           'withdrawn': 'LEFT', 'on_hold': 'INACTIVE',
         };
         return map[s] || 'ACTIVE';
@@ -406,6 +461,64 @@ export const candidatesApi = {
     total_candidates: number;
     by_status: Record<string, number>;
   }>('/candidates/statistics'),
+  recordDirectInterview: async (
+    candidateId: string,
+    data: { interviewDate: string; companyId: string; notes?: string; rating?: number }
+  ): Promise<DirectInterviewRecord> => {
+    const response = await fetchWithAuth<BackendDirectInterviewRecord>(`/candidates/${candidateId}/direct-interview`, {
+      method: 'POST',
+      body: JSON.stringify({
+        interview_date: data.interviewDate,
+        company_id: data.companyId,
+        notes: data.notes,
+        rating: data.rating,
+      }),
+    });
+    return transformDirectInterviewRecord(response);
+  },
+  selectDirectCandidate: async (
+    candidateId: string,
+    data: { companyId: string; notes?: string }
+  ): Promise<Candidate> => {
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/${candidateId}/direct-select`, {
+      method: 'POST',
+      body: JSON.stringify({
+        company_id: data.companyId,
+        notes: data.notes,
+      }),
+    });
+    return transformCandidate(response);
+  },
+  getInterviewHistory: async (candidateId: string): Promise<DirectInterviewRecord[]> => {
+    const response = await fetchWithAuth<BackendDirectInterviewRecord[]>(`/candidates/${candidateId}/interview-history`);
+    return response.map(transformDirectInterviewRecord);
+  },
+  updateInterviewRecord: async (
+    candidateId: string,
+    interviewId: string,
+    data: { interviewDate?: string; companyId?: string; notes?: string; rating?: number }
+  ): Promise<DirectInterviewRecord> => {
+    const response = await fetchWithAuth<BackendDirectInterviewRecord>(
+      `/candidates/${candidateId}/interview-history/${interviewId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          interview_date: data.interviewDate,
+          company_id: data.companyId,
+          notes: data.notes,
+          rating: data.rating,
+        }),
+      }
+    );
+    return transformDirectInterviewRecord(response);
+  },
+  deleteInterviewRecord: async (candidateId: string, interviewId: string): Promise<void> => {
+    await fetchWithAuth<void>(`/candidates/${candidateId}/interview-history/${interviewId}`, {
+      method: 'DELETE',
+    });
+  },
+  getDirectInterviewStats: () =>
+    fetchWithAuth<DirectInterviewStats>('/candidates/direct-interview/stats'),
 };
 
 // Applications
@@ -624,6 +737,21 @@ export const jobsApi = {
 
   delete: async (id: string): Promise<void> => {
     await fetchWithAuth<void>(`/jobs/${id}`, { method: 'DELETE' });
+  },
+};
+
+// Activity Logs API
+export const activityLogsApi = {
+  list: async (page = 1, pageSize = 100): Promise<PaginatedResponse<ActivityLog>> => {
+    const params = new URLSearchParams({
+      skip: String((page - 1) * pageSize),
+      limit: String(pageSize),
+    });
+    const response = await fetchWithAuth<ActivityLog[]>(`/activity-logs?${params}`);
+    return transformPaginatedResponse(response, (log) => log, page, pageSize);
+  },
+  cleanup: async (): Promise<void> => {
+    await fetchWithAuth<void>('/activity-logs/cleanup', { method: 'DELETE' });
   },
 };
 
