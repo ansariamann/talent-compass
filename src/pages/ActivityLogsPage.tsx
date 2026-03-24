@@ -13,12 +13,16 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Trash, RefreshCcw, FileText, Briefcase, UserPlus } from "lucide-react";
+import { RefreshCcw, FileText, Briefcase, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
 
 export default function ActivityLogsPage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, refetch, cleanup, isCleaning } = useActivityLogs(page, 50);
+  const [startDateInput, setStartDateInput] = useState("");
+  const [endDateInput, setEndDateInput] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState({ startDate: "", endDate: "" });
+  const { data, isLoading, isError, refetch } = useActivityLogs(page, 50, appliedFilters);
   const { user } = useAuth();
   
   const isAdmin = user?.role?.toLowerCase() === "hr_admin";
@@ -30,7 +34,7 @@ export default function ActivityLogsPage() {
       case "CANDIDATE_UPLOADED":
         return <FileText className="w-4 h-4 text-green-500" />;
       case "DIRECT_INTERVIEW":
-        return <UserPlus className="w-4 h-4 text-vibrant-purple" />;
+        return <UserPlus className="w-4 h-4 text-muted-foreground" />;
       default:
         return <FileText className="w-4 h-4 text-gray-500" />;
     }
@@ -54,6 +58,21 @@ export default function ActivityLogsPage() {
     );
   };
 
+  const handleApplyFilters = () => {
+    setPage(1);
+    setAppliedFilters({
+      startDate: startDateInput,
+      endDate: endDateInput,
+    });
+  };
+
+  const handleClearFilters = () => {
+    setPage(1);
+    setStartDateInput("");
+    setEndDateInput("");
+    setAppliedFilters({ startDate: "", endDate: "" });
+  };
+
   return (
     <Layout>
       <div className="flex justify-between items-center mb-6">
@@ -68,14 +87,39 @@ export default function ActivityLogsPage() {
             <RefreshCcw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          {isAdmin && (
-            <Button variant="destructive" size="sm" onClick={() => cleanup()} disabled={isCleaning}>
-              <Trash className="w-4 h-4 mr-2" />
-              Cleanup &gt; 1 Year
-            </Button>
-          )}
         </div>
       </div>
+
+      <Card className="glass-panel mb-6 p-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end">
+          <div className="flex-1">
+            <label className="mb-2 block text-sm font-medium">From Date</label>
+            <Input
+              type="date"
+              value={startDateInput}
+              onChange={(event) => setStartDateInput(event.target.value)}
+              max={endDateInput || undefined}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="mb-2 block text-sm font-medium">To Date</label>
+            <Input
+              type="date"
+              value={endDateInput}
+              onChange={(event) => setEndDateInput(event.target.value)}
+              min={startDateInput || undefined}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleApplyFilters} disabled={isLoading}>
+              Apply
+            </Button>
+            <Button variant="outline" onClick={handleClearFilters} disabled={isLoading}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       <Card className="glass-panel overflow-hidden">
         <div className="overflow-x-auto">

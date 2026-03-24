@@ -7,9 +7,9 @@ import { toast } from 'sonner';
 // Use mock data for now until backend is connected
 const useMockData = false;
 
-export function useClients() {
+export function useClients(limit: number = 1000) {
   return useQuery({
-    queryKey: ['clients'],
+    queryKey: ['clients', limit],
     queryFn: async () => {
       if (useMockData) {
         // Add registration fields to mock data
@@ -21,7 +21,7 @@ export function useClients() {
           registeredAt: undefined,
         })) as Client[];
       }
-      return clientsApi.list();
+      return clientsApi.list(limit);
     },
   });
 }

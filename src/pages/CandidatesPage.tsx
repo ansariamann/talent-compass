@@ -4,6 +4,7 @@ import { CandidateTable } from "@/components/candidates/CandidateTable";
 import { CandidateFilters } from "@/components/candidates/CandidateFilters";
 import { CandidateDetailPanel } from "@/components/candidates/CandidateDetailPanel";
 import { CandidateDetailModal } from "@/components/candidates/CandidateDetailModal";
+import { CandidateCreateModal } from "@/components/candidates/CandidateCreateModal";
 import { EnhancedSearch } from "@/components/search/EnhancedSearch";
 import { BulkActionsToolbar } from "@/components/candidates/BulkActionsToolbar";
 import { SubmitApplicationModal } from "@/components/candidates/SubmitApplicationModal";
@@ -11,8 +12,9 @@ import { MergeCandidatesModal } from "@/components/candidates/MergeCandidatesMod
 import { useCandidates, useUpdateCandidate } from "@/hooks/useCandidates";
 import { useClients } from "@/hooks/useClients";
 import { enrichCandidatesWithDuplicateInfo } from "@/lib/duplicateDetection";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type {
   Candidate,
   CandidateFilters as CandidateFiltersType,
@@ -20,11 +22,13 @@ import type {
 } from "@/types/ats";
 
 export default function CandidatesPage() {
+  const pageSize = 25;
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null
   );
   const [modalCandidate, setModalCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [candidatesToMerge, setCandidatesToMerge] = useState<Candidate[]>([]);
@@ -42,7 +46,7 @@ export default function CandidatesPage() {
     isLoading,
     error,
     refetch,
-  } = useCandidates({ ...filters, search: searchQuery }, page, 25);
+  } = useCandidates({ ...filters, search: searchQuery }, 1, 1000);
 
   // Fetch clients for filters and assignment
   const { data: clients = [] } = useClients();
@@ -98,6 +102,23 @@ export default function CandidatesPage() {
     // Enrich with duplicate detection info
     return enrichCandidatesWithDuplicateInfo(result);
   }, [candidates, filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / pageSize));
+
+  const paginatedCandidates = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredCandidates.slice(startIndex, startIndex + pageSize);
+  }, [filteredCandidates, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filters]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   // Get selected candidates for bulk actions
   const selectedCandidates = useMemo(() => {
@@ -188,7 +209,12 @@ export default function CandidatesPage() {
     }
   };
 
-  const SearchComponent = null;
+  const SearchComponent = (
+    <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+      <Plus className="mr-2 h-4 w-4" />
+      Add Candidate
+    </Button>
+  );
 
   // Loading state
   if (isLoading) {
@@ -269,7 +295,7 @@ export default function CandidatesPage() {
           {/* Table */}
           <div className="flex-1 overflow-auto">
             <CandidateTable
-              candidates={filteredCandidates}
+              candidates={paginatedCandidates}
               onSelectCandidate={setSelectedCandidate}
               selectedId={selectedCandidate?.id}
               selectedIds={selectedIds}
@@ -278,11 +304,11 @@ export default function CandidatesPage() {
           </div>
 
           {/* Pagination */}
-          {candidatesResponse && candidatesResponse.totalPages > 1 && (
+          {filteredCandidates.length > pageSize && (
             <div className="shrink-0 p-4 border-t border-border flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Showing {filteredCandidates.length} of{" "}
-                {candidatesResponse.total} candidates
+                Showing {paginatedCandidates.length} of{" "}
+                {filteredCandidates.length} candidates
               </span>
               <div className="flex gap-2">
                 <button
@@ -293,15 +319,13 @@ export default function CandidatesPage() {
                   Previous
                 </button>
                 <span className="px-3 py-1 text-sm">
-                  Page {page} of {candidatesResponse.totalPages}
+                  Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() =>
-                    setPage((p) =>
-                      Math.min(candidatesResponse.totalPages, p + 1)
-                    )
+                    setPage((p) => Math.min(totalPages, p + 1))
                   }
-                  disabled={page === candidatesResponse.totalPages}
+                  disabled={page === totalPages}
                   className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
                 >
                   Next
@@ -351,6 +375,11 @@ export default function CandidatesPage() {
         open={isMergeModalOpen}
         onOpenChange={setIsMergeModalOpen}
         onMerge={handleMergeConfirm}
+      />
+
+      <CandidateCreateModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
       />
     </DashboardLayout>
   );

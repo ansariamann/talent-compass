@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,13 +33,15 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useClients } from '@/hooks/useClients';
+import { useJobs } from '@/hooks/useJobs';
 import { useCreateApplication } from '@/hooks/useApplications';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { Candidate } from '@/types/ats';
+import type { Candidate, Job } from '@/types/ats';
 
 const formSchema = z.object({
   clientId: z.string().min(1, 'Please select a client'),
-  jobTitle: z.string().min(2, 'Job title must be at least 2 characters'),
+  jobId: z.string().min(1, 'Please select a job'),
   submissionNote: z.string().optional(),
 });
 
@@ -67,21 +69,33 @@ export function SubmitApplicationModal({
 }: SubmitApplicationModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [results, setResults] = useState<SubmissionResult[] | null>(null);
+  const { user } = useAuth();
+  const currentClientId = user?.client_id;
 
   const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs();
   const createApplication = useCreateApplication();
+  const scopedClients = currentClientId ? clients.filter((client) => client.id === currentClientId) : clients;
+  const jobs = jobsResponse?.data || [];
+  const scopedJobs = jobs.filter((job) => !currentClientId || job.clientId === currentClientId);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      clientId: '',
-      jobTitle: '',
+      clientId: currentClientId || '',
+      jobId: '',
       submissionNote: '',
     },
   });
 
+  useEffect(() => {
+    if (currentClientId) {
+      form.setValue('clientId', currentClientId);
+    }
+  }, [currentClientId, form]);
+
   const selectedClientId = form.watch('clientId');
-  const selectedClient = clients.find(c => c.id === selectedClientId);
+  const selectedClient = scopedClients.find(c => c.id === selectedClientId);
 
   const handleSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -89,10 +103,12 @@ export function SubmitApplicationModal({
 
     for (const candidate of candidates) {
       try {
+        const selectedJob = scopedJobs.find((job) => job.id === values.jobId);
         await createApplication.mutateAsync({
           candidateId: candidate.id,
-          clientId: values.clientId,
-          jobTitle: values.jobTitle,
+          clientId: currentClientId || values.clientId,
+          jobId: values.jobId,
+          jobTitle: selectedJob?.title,
         });
         submissionResults.push({
           candidateId: candidate.id,
@@ -242,7 +258,7 @@ export function SubmitApplicationModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {clients
+                      {scopedClients
                         .filter(c => c.isActive)
                         .map(client => (
                           <SelectItem key={client.id} value={client.id}>
@@ -263,19 +279,38 @@ export function SubmitApplicationModal({
             {/* Job title */}
             <FormField
               control={form.control}
-              name="jobTitle"
+              name="jobId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
                     <Briefcase className="w-3.5 h-3.5" />
-                    Job Title / Role
+                    Job Opening
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. Senior Software Engineer"
-                      {...field}
-                    />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedClientId}>
+                    <FormControl>
+                      <SelectTrigger disabled={jobsLoading || !selectedClientId}>
+                        <SelectValue placeholder={
+                          !selectedClientId
+                            ? 'Select a client first'
+                            : jobsLoading
+                            ? 'Loading jobs...'
+                            : 'Select a job opening'
+                        } />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {scopedJobs
+                        .filter(j => j.clientId === selectedClientId)
+                        .map(job => (
+                          <SelectItem key={job.id} value={job.id}>
+                            <div className="flex items-center gap-2">
+                              {job.title}
+                              <span className="text-xs text-muted-foreground">— {job.location}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

@@ -1,16 +1,14 @@
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Users,
   FileText,
   Building2,
-  BarChart3,
   Database,
   Settings,
   Sparkles,
   ChevronLeft,
   ChevronRight,
   Table2,
-  LogOut,
   Briefcase,
   Activity,
 } from "lucide-react";
@@ -22,7 +20,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   label: string;
@@ -57,53 +54,32 @@ const databaseItems: DatabaseItem[] = [
 
 export function Sidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
-
-  const userInitials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || "U";
   return (
     <aside
       className={cn(
-        "flex flex-col h-screen transition-all duration-300 relative",
-        "bg-gradient-to-b from-background/80 via-background/60 to-background/80",
-        "backdrop-blur-xl border-r border-white/10",
-        "before:absolute before:inset-0 before:bg-gradient-to-b before:from-primary/5 before:via-transparent before:to-vibrant-purple/5 before:pointer-events-none",
+        "relative flex h-screen flex-col border-r border-border bg-background",
         isCollapsed ? "w-16" : "w-60"
       )}
     >
-      {/* Logo */}
-      <div className="h-14 flex items-center px-4 border-b border-white/10 relative z-10">
+      <div className="h-14 border-b border-border px-4 flex items-center">
         <NavLink
           to="/"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+          className="flex items-center gap-2"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-vibrant-purple flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-shadow">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
-            <span className="font-semibold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+            <span className="font-semibold">
               TalentFlow
             </span>
           )}
         </NavLink>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto relative z-10">
+      <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -113,26 +89,23 @@ export function Sidebar() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
                 isActive
-                  ? "bg-white/10 text-foreground shadow-lg shadow-primary/10 backdrop-blur-sm border border-white/20"
-                  : "text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm"
+                  ? "border border-border bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              {isActive && (
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
-              )}
               <Icon
                 className={cn(
-                  "w-5 h-5 shrink-0 relative z-10 transition-colors",
-                  isActive ? "text-primary" : "group-hover:text-primary/80"
+                  "h-5 w-5 shrink-0",
+                  isActive ? "text-foreground" : ""
                 )}
               />
               {!isCollapsed && (
-                <span className="relative z-10">{item.label}</span>
+                <span>{item.label}</span>
               )}
               {!isCollapsed && item.badge && (
-                <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full relative z-10 backdrop-blur-sm">
+                <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                   {item.badge}
                 </span>
               )}
@@ -148,12 +121,12 @@ export function Sidebar() {
             className="mt-4"
           >
             <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-foreground/70 hover:text-foreground hover:bg-white/5 hover:backdrop-blur-sm transition-all duration-200">
+              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
                 <Database className="w-5 h-5 shrink-0" />
                 <span>Master Database (PostgreSQL)</span>
                 <ChevronRight
                   className={cn(
-                    "w-4 h-4 ml-auto transition-transform duration-200",
+                    "ml-auto h-4 w-4",
                     isDatabaseOpen && "rotate-90"
                   )}
                 />
@@ -167,24 +140,21 @@ export function Sidebar() {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative group",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm",
                       isActive
-                        ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
-                        : "text-foreground/60 hover:text-foreground hover:bg-white/5"
+                        ? "border border-border bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}
                   >
-                    {isActive && (
-                      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-vibrant-purple/10 opacity-50" />
-                    )}
                     <Table2
                       className={cn(
-                        "w-4 h-4 shrink-0 relative z-10",
-                        isActive && "text-primary"
+                        "h-4 w-4 shrink-0",
+                        isActive && "text-foreground"
                       )}
                     />
-                    <span className="relative z-10">{item.label}</span>
+                    <span>{item.label}</span>
                     {item.count !== undefined && (
-                      <span className="ml-auto text-xs text-muted-foreground font-mono relative z-10">
+                      <span className="ml-auto font-mono text-xs text-muted-foreground">
                         {item.count.toLocaleString()}
                       </span>
                     )}
@@ -197,10 +167,10 @@ export function Sidebar() {
           <NavLink
             to="/database"
             className={cn(
-              "flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+              "flex items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium",
               location.pathname.startsWith("/database")
-                ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
-                : "text-foreground/70 hover:text-foreground hover:bg-white/5"
+                ? "border border-border bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
             <Database className="w-5 h-5" />
@@ -208,34 +178,30 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Bottom section */}
-      <div className="p-2 border-t border-white/10 space-y-2 relative z-10">
+      <div className="space-y-2 border-t border-border p-2">
         <NavLink
           to="/settings"
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
             location.pathname === "/settings"
-              ? "bg-white/10 text-foreground backdrop-blur-sm border border-white/20"
-              : "text-foreground/70 hover:text-foreground hover:bg-white/5"
+              ? "border border-border bg-muted text-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
           )}
         >
-          {location.pathname === "/settings" && (
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-vibrant-purple/20 opacity-50" />
-          )}
           <Settings
             className={cn(
-              "w-5 h-5 shrink-0 relative z-10",
-              location.pathname === "/settings" && "text-primary"
+              "h-5 w-5 shrink-0",
+              location.pathname === "/settings" && "text-foreground"
             )}
           />
-          {!isCollapsed && <span className="relative z-10">Settings</span>}
+          {!isCollapsed && <span>Settings</span>}
         </NavLink>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full mt-2 justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 backdrop-blur-sm"
+          className="mt-2 w-full justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4" />

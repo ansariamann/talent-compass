@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Calendar, MessageSquare, Star } from "lucide-react";
+import { Loader2, Calendar, MessageSquare, Star, Briefcase, Wrench } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,8 @@ import { candidatesApi } from "@/lib/api";
 const formSchema = z.object({
   interview_date: z.string().min(1, "Interview date is required"),
   company_id: z.string().min(1, "Please select a company"),
+  position: z.string().min(1, "Position is required"),
+  skills: z.string().optional(),
   notes: z.string().optional(),
   rating: z.coerce.number().min(1).max(5).optional(),
 });
@@ -66,6 +68,8 @@ export function DirectInterviewForm({
     defaultValues: {
       interview_date: new Date().toISOString().slice(0, 16),
       company_id: "",
+      position: "",
+      skills: "",
       notes: "",
       rating: undefined,
     },
@@ -85,6 +89,8 @@ export function DirectInterviewForm({
     form.reset({
       interview_date: toLocalDatetimeValue(interview?.interviewDate),
       company_id: interview?.companyId || "",
+      position: interview?.position || "",
+      skills: interview?.skills?.join(", ") || "",
       notes: interview?.notes || "",
       rating: interview?.rating ?? undefined,
     });
@@ -99,6 +105,8 @@ export function DirectInterviewForm({
         await candidatesApi.updateInterviewRecord(candidate.id, interview.id, {
           interviewDate: new Date(data.interview_date).toISOString(),
           companyId: data.company_id,
+          position: data.position,
+          skills: (data.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
           notes: data.notes || undefined,
           rating: data.rating ?? undefined,
         });
@@ -107,6 +115,8 @@ export function DirectInterviewForm({
         await candidatesApi.recordDirectInterview(candidate.id, {
           interviewDate: new Date(data.interview_date).toISOString(),
           companyId: data.company_id,
+          position: data.position,
+          skills: (data.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
           notes: data.notes || undefined,
           rating: data.rating ?? undefined,
         });
@@ -183,6 +193,44 @@ export function DirectInterviewForm({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="position"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Position
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. Senior Python Developer" {...field} disabled={isSubmitting} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="skills"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Wrench className="w-4 h-4" />
+                    Skills
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Comma-separated skills, e.g. Python, FastAPI, PostgreSQL"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

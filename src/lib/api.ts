@@ -20,6 +20,7 @@ import type {
   DirectInterviewStats,
   DirectInterviewRecord,
 } from '@/types/ats';
+import { getAuthToken, clearAuthToken } from '@/lib/authToken';
 
 export interface ActivityLog {
   id: string;
@@ -32,10 +33,12 @@ export interface ActivityLog {
   created_at: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+export interface ActivityLogFilters {
+  startDate?: string;
+  endDate?: string;
+}
 
-// Get token from localStorage
-const getToken = () => localStorage.getItem('auth_token');
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -49,7 +52,7 @@ async function fetchWithAuth<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
+  const token = getAuthToken();
 
 
   const headers: Record<string, string> = {
@@ -67,14 +70,28 @@ async function fetchWithAuth<T>(
   });
 
   if (response.status === 401) {
-    localStorage.removeItem('auth_token');
+    clearAuthToken();
     window.location.href = '/login';
     throw new ApiError(401, 'Unauthorized');
   }
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new ApiError(response.status, errorText || 'Request failed');
+    let errorMessage = errorText || 'Request failed';
+
+    if (errorText) {
+      try {
+        const parsed = JSON.parse(errorText) as {
+          error?: { message?: string };
+          detail?: string;
+        };
+        errorMessage = parsed.error?.message || parsed.detail || errorMessage;
+      } catch {
+        // Keep the raw text when the response is not JSON.
+      }
+    }
+
+    throw new ApiError(response.status, errorMessage);
   }
 
   // Handle empty responses
@@ -189,6 +206,7 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.name !== undefined) result.name = frontend.name;
   if (frontend.email !== undefined) result.email = frontend.email;
   if (frontend.phone !== undefined) result.phone = frontend.phone;
+  if (frontend.company !== undefined) result.company = frontend.company;
   if (frontend.location !== undefined) result.location = frontend.location;
   if (frontend.presentAddress !== undefined) result.present_address = frontend.presentAddress;
   if (frontend.permanentAddress !== undefined) result.permanent_address = frontend.permanentAddress;
@@ -241,6 +259,8 @@ interface BackendDirectInterviewRecord {
   company_id: string;
   interviewer_id: string;
   interview_date: string;
+  position?: string | null;
+  skills?: string[] | null;
   notes?: string | null;
   rating?: number | null;
   created_at: string;
@@ -301,6 +321,8 @@ function transformDirectInterviewRecord(backend: BackendDirectInterviewRecord): 
     companyId: backend.company_id,
     interviewerId: backend.interviewer_id,
     interviewDate: backend.interview_date,
+    position: backend.position || undefined,
+    skills: backend.skills || undefined,
     notes: backend.notes || undefined,
     rating: backend.rating ?? undefined,
     createdAt: backend.created_at,
@@ -463,13 +485,15 @@ export const candidatesApi = {
   }>('/candidates/statistics'),
   recordDirectInterview: async (
     candidateId: string,
-    data: { interviewDate: string; companyId: string; notes?: string; rating?: number }
+    data: { interviewDate: string; companyId: string; position?: string; skills?: string[]; notes?: string; rating?: number }
   ): Promise<DirectInterviewRecord> => {
     const response = await fetchWithAuth<BackendDirectInterviewRecord>(`/candidates/${candidateId}/direct-interview`, {
       method: 'POST',
       body: JSON.stringify({
         interview_date: data.interviewDate,
         company_id: data.companyId,
+        position: data.position,
+        skills: data.skills,
         notes: data.notes,
         rating: data.rating,
       }),
@@ -496,7 +520,7 @@ export const candidatesApi = {
   updateInterviewRecord: async (
     candidateId: string,
     interviewId: string,
-    data: { interviewDate?: string; companyId?: string; notes?: string; rating?: number }
+    data: { interviewDate?: string; companyId?: string; position?: string; skills?: string[]; notes?: string; rating?: number }
   ): Promise<DirectInterviewRecord> => {
     const response = await fetchWithAuth<BackendDirectInterviewRecord>(
       `/candidates/${candidateId}/interview-history/${interviewId}`,
@@ -505,6 +529,8 @@ export const candidatesApi = {
         body: JSON.stringify({
           interview_date: data.interviewDate,
           company_id: data.companyId,
+          position: data.position,
+          skills: data.skills,
           notes: data.notes,
           rating: data.rating,
         }),
@@ -530,7 +556,19 @@ export const applicationsApi = {
     });
 
     // Add filters
-    if (filters.status?.length) params.set('status', filters.status[0]);
+    if (filters.status?.length) {
+      const statusMap: Record<string, string> = {
+        pending: 'RECEIVED',
+        in_review: 'SCREENING',
+        shortlisted: 'INTERVIEW_SCHEDULED',
+        interview: 'INTERVIEWED',
+        offer: 'OFFER_MADE',
+        accepted: 'HIRED',
+        declined: 'WITHDRAWN',
+        rejected: 'REJECTED',
+      };
+      params.set('application_status', statusMap[filters.status[0]] || filters.status[0]);
+    }
     if (filters.candidateId) params.set('candidate_id', filters.candidateId);
     if (filters.flaggedOnly) params.set('flagged_only', 'true');
     if (filters.includeDeleted) params.set('include_deleted', 'true');
@@ -544,12 +582,15 @@ export const applicationsApi = {
     return transformApplication(response);
   },
 
-  create: async (data: { candidateId: string; clientId: string; jobTitle: string }): Promise<Application> => {
-    const backendData = {
+  create: async (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string }): Promise<Application> => {
+    const backendData: Record<string, unknown> = {
       candidate_id: data.candidateId,
       client_id: data.clientId,
       job_title: data.jobTitle,
     };
+    if (data.jobId) {
+      backendData.job_id = data.jobId;
+    }
     const response = await fetchWithAuth<BackendApplication>('/applications', {
       method: 'POST',
       body: JSON.stringify(backendData),
@@ -742,11 +783,17 @@ export const jobsApi = {
 
 // Activity Logs API
 export const activityLogsApi = {
-  list: async (page = 1, pageSize = 100): Promise<PaginatedResponse<ActivityLog>> => {
+  list: async (
+    page = 1,
+    pageSize = 100,
+    filters: ActivityLogFilters = {}
+  ): Promise<PaginatedResponse<ActivityLog>> => {
     const params = new URLSearchParams({
       skip: String((page - 1) * pageSize),
       limit: String(pageSize),
     });
+    if (filters.startDate) params.set("start_date", filters.startDate);
+    if (filters.endDate) params.set("end_date", filters.endDate);
     const response = await fetchWithAuth<ActivityLog[]>(`/activity-logs?${params}`);
     return transformPaginatedResponse(response, (log) => log, page, pageSize);
   },
@@ -823,9 +870,13 @@ function toFrontendClient(backend: BackendClient): Client {
 }
 
 export const clientsApi = {
-  list: async (): Promise<Client[]> => {
+  list: async (limit = 1000, skip = 0): Promise<Client[]> => {
     try {
-      const response = await fetchWithAuth<BackendClient[]>('/clients/');
+      const params = new URLSearchParams({
+        skip: String(skip),
+        limit: String(limit),
+      });
+      const response = await fetchWithAuth<BackendClient[]>(`/clients/?${params}`);
       if (!Array.isArray(response)) {
         return [];
       }

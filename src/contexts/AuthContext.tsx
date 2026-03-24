@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User } from '@/types/ats';
+import { getAuthToken, setAuthToken, clearAuthToken } from '@/lib/authToken';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -14,17 +15,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Token management
-const getToken = () => localStorage.getItem('auth_token');
-const setToken = (token: string) => localStorage.setItem('auth_token', token);
-const removeToken = () => localStorage.removeItem('auth_token');
-
 // Enhanced fetch with auth
 export async function fetchWithAuth<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
+  const token = getAuthToken();
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers: {
@@ -35,7 +31,7 @@ export async function fetchWithAuth<T>(
   });
 
   if (response.status === 401) {
-    removeToken();
+    clearAuthToken();
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -71,10 +67,10 @@ function transformUserResponse(data: Record<string, unknown>): User {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const checkAuth = useCallback(async () => {
-    const token = getToken();
+    const token = getAuthToken();
     if (!token) {
       setUser(null);
       setIsLoading(false);
@@ -100,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(transformUserResponse(rawData));
     } catch (error) {
       console.error('Auth check failed:', error);
-      removeToken();
+      clearAuthToken();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -147,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (response.ok) {
           const data = await response.json();
-          setToken(data.access_token || data.token);
+          setAuthToken(data.access_token || data.token);
 
           // Fetch user data
           try {
@@ -186,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Demo mode fallback
       if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
-        setToken('demo-token-' + Date.now());
+        setAuthToken('demo-token-' + Date.now());
         setUser(DEMO_USER);
         return { success: true };
       }
@@ -202,14 +198,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      const token = getToken();
+      const token = getAuthToken();
       if (token && !token.startsWith('demo-token-')) {
         await fetchWithAuth('/auth/logout', { method: 'POST' });
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      removeToken();
+      clearAuthToken();
       setUser(null);
     }
   };

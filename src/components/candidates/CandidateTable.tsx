@@ -112,7 +112,7 @@ export function CandidateTable({
                   checked={allSelected}
                   onCheckedChange={handleSelectAll}
                   className={cn(
-                    someSelected && "data-[state=unchecked]:bg-primary/30"
+                    someSelected && "data-[state=unchecked]:bg-muted"
                   )}
                   aria-label="Select all candidates"
                 />
@@ -150,8 +150,8 @@ export function CandidateTable({
                 onClick={() => onSelectCandidate(candidate)}
                 className={cn(
                   "cursor-pointer transition-colors",
-                  selectedId === candidate.id && "bg-accent",
-                  isChecked && "bg-primary/5"
+                  selectedId === candidate.id && "bg-muted",
+                  isChecked && "bg-muted/60"
                 )}
               >
                 {onSelectionChange && (

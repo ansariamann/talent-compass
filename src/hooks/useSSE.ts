@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { getAuthToken } from "@/lib/authToken";
 
 interface SSEEvent {
   type: string;
@@ -36,7 +37,7 @@ export function useSSE(options: UseSSEOptions = {}) {
     }
 
     const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-    const token = localStorage.getItem("auth_token");
+    const token = getAuthToken();
 
     // EventSource doesn't support custom headers, so we pass token as query parameter
     const url = token

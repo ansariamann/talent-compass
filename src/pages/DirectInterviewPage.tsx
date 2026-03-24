@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DirectInterviewForm } from "@/components/candidates/DirectInterviewForm";
 import { DirectSelectionModal } from "@/components/candidates/DirectSelectionModal";
 import { InterviewHistoryDialog } from "@/components/candidates/InterviewHistoryDialog";
+import { AssignExistingInterviewDialog } from "@/components/candidates/AssignExistingInterviewDialog";
 import { EnhancedSearch } from "@/components/search/EnhancedSearch";
 import { candidatesApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Candidate, DirectInterviewStats } from "@/types/ats";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 
 type DirectInterviewTab = "pending" | "interviewed" | "selected";
 
@@ -54,6 +56,7 @@ export default function DirectInterviewPage() {
   const [isInterviewFormOpen, setIsInterviewFormOpen] = useState(false);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isAssignExistingOpen, setIsAssignExistingOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -179,9 +182,15 @@ export default function DirectInterviewPage() {
             placeholder="Search by name, email, company, location or skill..."
             className="max-w-2xl"
           />
-          <Button variant="outline" onClick={refreshAll}>
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsAssignExistingOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Assign Existing Candidate
+            </Button>
+            <Button variant="outline" onClick={refreshAll}>
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DirectInterviewTab)}>
@@ -247,6 +256,15 @@ export default function DirectInterviewPage() {
         onOpenChange={setIsHistoryOpen}
         candidate={selectedCandidate}
         onChanged={refreshAll}
+      />
+
+      <AssignExistingInterviewDialog
+        open={isAssignExistingOpen}
+        onOpenChange={setIsAssignExistingOpen}
+        onSuccess={async () => {
+          await refreshAll();
+          setActiveTab("interviewed");
+        }}
       />
     </DashboardLayout>
   );

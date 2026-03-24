@@ -147,7 +147,22 @@ export function InterviewHistoryDialog({
                               <Building2 className="h-4 w-4" />
                               Company assignment target: {companyName}
                             </div>
+                            {interview.position && (
+                              <div className="sm:col-span-2">
+                                Position: <span className="text-foreground">{interview.position}</span>
+                              </div>
+                            )}
                           </div>
+
+                          {interview.skills && interview.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {interview.skills.map((skill) => (
+                                <Badge key={`${interview.id}-${skill}`} variant="secondary">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
 
                           <div className="rounded-md bg-muted/40 p-3 text-sm leading-relaxed text-foreground/90">
                             {interview.notes?.trim() || "No notes recorded."}

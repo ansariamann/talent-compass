@@ -59,7 +59,7 @@ export function useCreateApplication() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: { candidateId: string; clientId: string; jobTitle: string }) =>
+        mutationFn: (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string }) =>
             applicationsApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });

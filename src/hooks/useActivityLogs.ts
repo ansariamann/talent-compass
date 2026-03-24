@@ -2,13 +2,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { activityLogsApi } from "@/lib/api";
 import { toast } from "sonner";
 
-export function useActivityLogs(page = 1, pageSize = 100) {
+export interface ActivityLogFilters {
+  startDate?: string;
+  endDate?: string;
+}
+
+export function useActivityLogs(page = 1, pageSize = 100, filters: ActivityLogFilters = {}) {
   const queryClient = useQueryClient();
-  const queryKey = ["activity-logs", page, pageSize];
+  const queryKey = ["activity-logs", page, pageSize, filters.startDate ?? "", filters.endDate ?? ""];
 
   const query = useQuery({
     queryKey,
-    queryFn: () => activityLogsApi.list(page, pageSize),
+    queryFn: () => activityLogsApi.list(page, pageSize, filters),
     refetchInterval: 30000, 
   });
 

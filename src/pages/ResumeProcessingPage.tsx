@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function ResumeProcessingPage() {
     const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const HeaderActions = (
         <Button onClick={() => setIsUploadOpen(true)}>
@@ -51,13 +52,13 @@ export default function ResumeProcessingPage() {
                     </CardContent>
                 </Card>
 
-                <ResumeJobsList />
+                <ResumeJobsList refreshKey={refreshKey} />
             </div>
 
             <ResumeUploadDialog
                 open={isUploadOpen}
                 onOpenChange={setIsUploadOpen}
-                onSuccess={() => {}}
+                onSuccess={() => setRefreshKey((value) => value + 1)}
             />
         </DashboardLayout>
     );

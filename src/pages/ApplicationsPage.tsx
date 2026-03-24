@@ -17,9 +17,10 @@ import {
 } from '@/hooks/useApplications';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useClients } from '@/hooks/useClients';
+import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, MessageSquare, Loader2, AlertCircle, Plus, Flag, Archive } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Application, Candidate, ApplicationFilters } from '@/types/ats';
+import type { Application, Candidate, ApplicationFilters, UserRole } from '@/types/ats';
 
 export default function ApplicationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +28,9 @@ export default function ApplicationsPage() {
   const [filters, setFilters] = useState<ApplicationFilters>({});
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<Application | null>(null);
+  const { user } = useAuth();
+  const isClientScopedUser = user?.role === 'client_admin' || user?.role === 'client_user';
+  const currentClientId = isClientScopedUser ? user?.client_id : undefined;
 
   // Mutations
   const createMutation = useCreateApplication();
@@ -45,10 +49,13 @@ export default function ApplicationsPage() {
   } = useApplications(filters, page, 25);
 
   // Fetch clients
-  const { data: clients = [] } = useClients();
+  const { data: clients = [] } = useClients(1000);
+  const scopedClients = isClientScopedUser && currentClientId
+    ? clients.filter((client) => client.id === currentClientId)
+    : clients;
 
   // Fetch candidates to get candidate details
-  const { data: candidatesResponse } = useCandidates({}, 1, 100);
+  const { data: candidatesResponse } = useCandidates({}, 1, 500);
 
   // Build candidate lookup map
   const candidateMap = new Map<string, Candidate>();
@@ -70,8 +77,11 @@ export default function ApplicationsPage() {
     );
   });
 
-  const handleCreate = async (data: { candidateId: string; clientId: string; jobTitle: string }) => {
-    await createMutation.mutateAsync(data);
+  const handleCreate = async (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string }) => {
+    await createMutation.mutateAsync({
+      ...data,
+      clientId: currentClientId || data.clientId,
+    });
     toast.success('Application created successfully');
   };
 
@@ -214,7 +224,8 @@ export default function ApplicationsPage() {
         onUpdate={handleUpdate}
         application={editingApplication}
         candidates={candidatesResponse?.data || []}
-        clients={clients}
+        clients={scopedClients}
+        currentClientId={currentClientId}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
     </DashboardLayout>

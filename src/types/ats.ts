@@ -216,6 +216,8 @@ export interface DirectInterviewRecord {
   companyId: string;
   interviewerId: string;
   interviewDate: string;
+  position?: string;
+  skills?: string[];
   notes?: string;
   rating?: number;
   createdAt: string;
@@ -296,14 +298,18 @@ export interface ResumeJob {
   id: string;
   client_id: string;
   candidate_id?: string;
+  email_message_id?: string;
+  file_name?: string;
+  file_path?: string;
   status: ResumeJobStatus;
   resume_text?: string;
   resume_file_path?: string;
   parsed_data?: Record<string, unknown>;
   error_message?: string;
-  attempts: number;
+  attempts?: number;
+  processed_at?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface EmailAttachment {

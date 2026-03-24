@@ -111,6 +111,7 @@ export function SubmitCandidateToJobModal({
         await createApplication.mutateAsync({
           candidateId: candidate.id,
           clientId: job.clientId,
+          jobId: job.id,
           jobTitle: job.title,
         });
         submissionResults.push({
