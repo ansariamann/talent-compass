@@ -105,6 +105,23 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-6">
+            <Card className="border-destructive/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-destructive">
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </CardTitle>
+                <CardDescription>
+                  End your current session and return to the login screen.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="destructive" onClick={handleLogout} disabled={loggingOut}>
+                  {loggingOut ? 'Logging out...' : 'Logout'}
+                </Button>
+              </CardContent>
+            </Card>
+
             <Card className="border-border/70">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -192,23 +209,6 @@ export default function SettingsPage() {
                   </div>
                   <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled} />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-destructive/40">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base text-destructive">
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </CardTitle>
-                <CardDescription>
-                  End your current session and return to the login screen.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="destructive" onClick={handleLogout} disabled={loggingOut}>
-                  {loggingOut ? 'Logging out...' : 'Logout'}
-                </Button>
               </CardContent>
             </Card>
           </div>
