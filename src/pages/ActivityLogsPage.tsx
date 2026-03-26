@@ -90,36 +90,28 @@ export default function ActivityLogsPage() {
         </div>
       </div>
 
-      <Card className="glass-panel mb-6 p-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end">
-          <div className="flex-1">
-            <label className="mb-2 block text-sm font-medium">From Date</label>
-            <Input
-              type="date"
-              value={startDateInput}
-              onChange={(event) => setStartDateInput(event.target.value)}
-              max={endDateInput || undefined}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="mb-2 block text-sm font-medium">To Date</label>
-            <Input
-              type="date"
-              value={endDateInput}
-              onChange={(event) => setEndDateInput(event.target.value)}
-              min={startDateInput || undefined}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleApplyFilters} disabled={isLoading}>
-              Apply
-            </Button>
-            <Button variant="outline" onClick={handleClearFilters} disabled={isLoading}>
-              Clear
-            </Button>
-          </div>
-        </div>
-      </Card>
+      <div className="flex items-center gap-3 mb-6">
+        <Input
+          type="date"
+          placeholder="From"
+          value={startDateInput}
+          onChange={(event) => { setStartDateInput(event.target.value); setAppliedFilters(f => ({ ...f, startDate: event.target.value })); setPage(1); }}
+          max={endDateInput || undefined}
+          className="w-44"
+        />
+        <span className="text-muted-foreground text-sm">to</span>
+        <Input
+          type="date"
+          placeholder="To"
+          value={endDateInput}
+          onChange={(event) => { setEndDateInput(event.target.value); setAppliedFilters(f => ({ ...f, endDate: event.target.value })); setPage(1); }}
+          min={startDateInput || undefined}
+          className="w-44"
+        />
+        {(startDateInput || endDateInput) && (
+          <Button variant="ghost" size="sm" onClick={handleClearFilters}>Clear</Button>
+        )}
+      </div>
 
       <Card className="glass-panel overflow-hidden">
         <div className="overflow-x-auto">
