@@ -74,7 +74,7 @@ export default function ActivityLogsPage() {
   };
 
   return (
-    <Layout>
+    <Layout title="Activity Logs">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Activity Logs</h1>
