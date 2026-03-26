@@ -968,7 +968,7 @@ export function createSSEConnection(
   onEvent: (event: { type: string; payload: unknown }) => void,
   onError?: (error: Error) => void
 ): () => void {
-  const token = getToken();
+  const token = getAuthToken();
   const url = token
     ? `${API_BASE}/events/stream?token=${token}`
     : `${API_BASE}/events/stream`;

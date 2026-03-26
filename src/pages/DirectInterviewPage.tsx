@@ -19,17 +19,17 @@ import { Plus } from "lucide-react";
 
 type DirectInterviewTab = "pending" | "interviewed" | "selected";
 
-function mapTabToFilters(tab: DirectInterviewTab, search: string) {
+function mapTabToFilters(tab: DirectInterviewTab, search: string): CandidateFilters {
   if (tab === "selected") {
     return {
       search,
-      status: ["selected"] as const,
+      status: ["selected"],
     };
   }
   if (tab === "interviewed") {
     return {
       search,
-      status: ["new"] as const,
+      status: ["new"],
       isDirectInterview: true,
     };
   }
