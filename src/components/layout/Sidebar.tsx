@@ -36,11 +36,11 @@ interface DatabaseItem {
 
 const navItems: NavItem[] = [
   { label: "Candidates", href: "/candidates", icon: Users },
-  { label: "Direct Interview", href: "/direct-interview", icon: FileText },
+  { label: "Direct Interview", href: "/direct-interview", icon: UserPlus },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
-  { label: "Applications", href: "/applications", icon: FileText },
-  { label: "Processing", href: "/resume-processing", icon: FileText }, // Using FileText for now, or maybe Mail/Inbox
-  { label: "Clients", href: "/clients", icon: Building2 },
+  { label: "Applications", href: "/applications", icon: ClipboardList },
+  { label: "Processing", href: "/resume-processing", icon: FileText },
+  { label: "Clients", href: "/clients", icon: Handshake },
   { label: "Activity Logs", href: "/activity-logs", icon: Activity },
 ];
 
