@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Candidate, DirectInterviewStats } from "@/types/ats";
+import type { Candidate, CandidateFilters, DirectInterviewStats } from "@/types/ats";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
