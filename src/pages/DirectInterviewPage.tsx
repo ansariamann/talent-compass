@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, FileText, Loader2, Users } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DirectInterviewForm } from "@/components/candidates/DirectInterviewForm";
 import { DirectSelectionModal } from "@/components/candidates/DirectSelectionModal";
@@ -11,9 +11,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Candidate, CandidateFilters, DirectInterviewStats } from "@/types/ats";
+import type { Candidate, CandidateFilters } from "@/types/ats";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -48,50 +48,37 @@ export default function DirectInterviewPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearch = useDeferredValue(searchQuery);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [stats, setStats] = useState<DirectInterviewStats>({ pending: 0, interviewed: 0, selected: 0 });
   const [isLoading, setIsLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [isInterviewFormOpen, setIsInterviewFormOpen] = useState(false);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAssignExistingOpen, setIsAssignExistingOpen] = useState(false);
+  const hasSearchQuery = deferredSearch.trim().length > 0;
 
   useEffect(() => {
     if (!isAdmin) {
       setError("Only HR admins can access the direct interview workflow");
-      return;
+    } else {
+      setError(null);
     }
-    let cancelled = false;
-    async function loadStats() {
-      setStatsLoading(true);
-      try {
-        const response = await candidatesApi.getDirectInterviewStats();
-        if (!cancelled) setStats(response);
-      } catch (e) {
-        if (!cancelled) {
-          const message = e instanceof Error ? e.message : "Failed to load interview stats";
-          setError(message);
-        }
-      } finally {
-        if (!cancelled) setStatsLoading(false);
-      }
-    }
-    loadStats();
-    return () => {
-      cancelled = true;
-    };
   }, [isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
+    if (!hasSearchQuery) {
+      setCandidates([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
     let cancelled = false;
     async function loadCandidates() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await candidatesApi.list(mapTabToFilters(activeTab, deferredSearch), 1, 100);
+        const response = await candidatesApi.list(mapTabToFilters(activeTab, deferredSearch.trim()), 1, 100);
         if (!cancelled) {
           setCandidates(response.data);
         }
@@ -108,16 +95,14 @@ export default function DirectInterviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, deferredSearch, isAdmin]);
+  }, [activeTab, deferredSearch, hasSearchQuery, isAdmin]);
 
   const refreshAll = async () => {
     try {
-      const [candidateResponse, statsResponse] = await Promise.all([
-        candidatesApi.list(mapTabToFilters(activeTab, deferredSearch), 1, 100),
-        candidatesApi.getDirectInterviewStats(),
-      ]);
+      const candidateResponse = hasSearchQuery
+        ? await candidatesApi.list(mapTabToFilters(activeTab, deferredSearch.trim()), 1, 100)
+        : { data: [], total: 0, page: 1, pageSize: 100, totalPages: 0 };
       setCandidates(candidateResponse.data);
-      setStats(statsResponse);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to refresh direct interview data";
       setError(message);
@@ -169,12 +154,6 @@ export default function DirectInterviewPage() {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard title="Pending Interviews" value={stats.pending} icon={FileText} loading={statsLoading} />
-          <StatCard title="Interviewed" value={stats.interviewed} icon={CheckCircle2} loading={statsLoading} />
-          <StatCard title="Selected" value={stats.selected} icon={Users} loading={statsLoading} />
-        </div>
-
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <EnhancedSearch
             value={searchQuery}
@@ -195,9 +174,9 @@ export default function DirectInterviewPage() {
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DirectInterviewTab)}>
           <TabsList>
-            <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
-            <TabsTrigger value="interviewed">Interviewed ({stats.interviewed})</TabsTrigger>
-            <TabsTrigger value="selected">Selected ({stats.selected})</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="interviewed">Interviewed</TabsTrigger>
+            <TabsTrigger value="selected">Selected</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -206,6 +185,12 @@ export default function DirectInterviewPage() {
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             Loading candidates...
           </div>
+        ) : !hasSearchQuery ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Search by candidate name, skill, or location to load interview candidates.
+            </CardContent>
+          </Card>
         ) : candidates.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
@@ -267,32 +252,6 @@ export default function DirectInterviewPage() {
         }}
       />
     </DashboardLayout>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  loading,
-}: {
-  title: string;
-  value: number;
-  icon: typeof FileText;
-  loading: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardDescription className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" />
-          {title}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <CardTitle className="text-3xl">{loading ? "..." : value}</CardTitle>
-      </CardContent>
-    </Card>
   );
 }
 

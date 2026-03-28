@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CandidateTable } from "@/components/candidates/CandidateTable";
 import { CandidateFilters } from "@/components/candidates/CandidateFilters";
@@ -9,7 +9,7 @@ import { EnhancedSearch } from "@/components/search/EnhancedSearch";
 import { BulkActionsToolbar } from "@/components/candidates/BulkActionsToolbar";
 import { SubmitApplicationModal } from "@/components/candidates/SubmitApplicationModal";
 import { MergeCandidatesModal } from "@/components/candidates/MergeCandidatesModal";
-import { useCandidates, useUpdateCandidate } from "@/hooks/useCandidates";
+import { useCandidates, useDeleteCandidate, useUpdateCandidate } from "@/hooks/useCandidates";
 import { useClients } from "@/hooks/useClients";
 import { enrichCandidatesWithDuplicateInfo } from "@/lib/duplicateDetection";
 import { Loader2, AlertCircle, Plus } from "lucide-react";
@@ -29,10 +29,12 @@ export default function CandidatesPage() {
   const [modalCandidate, setModalCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [candidatesToMerge, setCandidatesToMerge] = useState<Candidate[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<CandidateFiltersType>({
@@ -40,18 +42,27 @@ export default function CandidatesPage() {
     excludeLeavers: true,
   });
 
+  // Debounce the search query to avoid re-fetching on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Fetch candidates from API
   const {
     data: candidatesResponse,
     isLoading,
     error,
     refetch,
-  } = useCandidates({ ...filters, search: searchQuery }, 1, 1000);
+  } = useCandidates({ ...filters, search: debouncedSearch }, 1, 1000);
 
   // Fetch clients for filters and assignment
   const { data: clients = [] } = useClients();
 
   const updateCandidateMutation = useUpdateCandidate();
+  const deleteCandidateMutation = useDeleteCandidate();
 
   // Get candidates array from response
   const candidates = useMemo(() => {
@@ -112,7 +123,7 @@ export default function CandidatesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, filters]);
+  }, [debouncedSearch, filters]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -141,6 +152,24 @@ export default function CandidatesPage() {
 
   const handleClearSelection = () => {
     setSelectedIds([]);
+  };
+
+  const handleEditCandidate = (candidate: Candidate) => {
+    setEditingCandidate(candidate);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteCandidate = async (candidateId: string) => {
+    try {
+      await deleteCandidateMutation.mutateAsync(candidateId);
+      setSelectedIds((current) => current.filter((id) => id !== candidateId));
+      setSelectedCandidate((current) => (current?.id === candidateId ? null : current));
+      setModalCandidate((current) => (current?.id === candidateId ? null : current));
+      toast.success("Candidate deleted");
+      refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete candidate");
+    }
   };
 
   const handleBulkStatusChange = async (
@@ -210,7 +239,14 @@ export default function CandidatesPage() {
   };
 
   const SearchComponent = (
-    <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        setEditingCandidate(null);
+        setIsCreateModalOpen(true);
+      }}
+    >
       <Plus className="mr-2 h-4 w-4" />
       Add Candidate
     </Button>
@@ -297,6 +333,8 @@ export default function CandidatesPage() {
             <CandidateTable
               candidates={paginatedCandidates}
               onSelectCandidate={setSelectedCandidate}
+              onEditCandidate={handleEditCandidate}
+              onDeleteCandidate={handleDeleteCandidate}
               selectedId={selectedCandidate?.id}
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
@@ -355,6 +393,11 @@ export default function CandidatesPage() {
           onOpenChange={(open) => {
             if (!open) handleCloseModal();
           }}
+          onCandidateUpdated={(updatedCandidate) => {
+            setModalCandidate(updatedCandidate);
+            setSelectedCandidate((current) => (current?.id === updatedCandidate.id ? updatedCandidate : current));
+            refetch();
+          }}
         />
       )}
 
@@ -379,7 +422,23 @@ export default function CandidatesPage() {
 
       <CandidateCreateModal
         open={isCreateModalOpen}
-        onOpenChange={setIsCreateModalOpen}
+        onOpenChange={(open) => {
+          setIsCreateModalOpen(open);
+          if (!open) {
+            setEditingCandidate(null);
+          }
+        }}
+        candidate={editingCandidate}
+        onSuccess={(savedCandidate) => {
+          setEditingCandidate(null);
+          setSelectedCandidate((current) =>
+            current?.id === savedCandidate.id ? savedCandidate : current
+          );
+          setModalCandidate((current) =>
+            current?.id === savedCandidate.id ? savedCandidate : current
+          );
+          refetch();
+        }}
       />
     </DashboardLayout>
   );

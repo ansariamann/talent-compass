@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/dialog';
 import {
   MoreHorizontal,
-  Edit,
   Trash2,
   RotateCcw,
   Flag,
@@ -39,7 +38,6 @@ import type { Application } from '@/types/ats';
 
 interface ApplicationActionsMenuProps {
   application: Application;
-  onEdit: (application: Application) => void;
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onFlag: (id: string, reason?: string) => void;
@@ -48,7 +46,6 @@ interface ApplicationActionsMenuProps {
 
 export function ApplicationActionsMenu({
   application,
-  onEdit,
   onDelete,
   onRestore,
   onFlag,
@@ -73,11 +70,6 @@ export function ApplicationActionsMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onEdit(application)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
-
           {application.isFlagged ? (
             <DropdownMenuItem onClick={() => onUnflag(application.id)}>
               <FlagOff className="mr-2 h-4 w-4" />

@@ -1,49 +1,83 @@
 import { useState } from "react";
-import {
-  ChevronDown,
-  ChevronUp,
-  MoreHorizontal,
-} from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "./StatusBadge";
 import { SkillsOverflowTooltip } from "./SkillsOverflowTooltip";
+import { CandidateActionsMenu } from "./CandidateActionsMenu";
 import type { Candidate } from "@/types/ats";
 
 interface CandidateTableProps {
   candidates: Candidate[];
   onSelectCandidate: (candidate: Candidate) => void;
+  onEditCandidate: (candidate: Candidate) => void;
+  onDeleteCandidate: (candidateId: string) => void;
   selectedId?: string;
   isLoading?: boolean;
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
 }
 
+type SortField = "name" | "experience" | "updatedAt";
+
+function formatCurrency(value?: number) {
+  if (value == null) return "-";
+  return `Rs ${value.toLocaleString()}`;
+}
+
+function formatDate(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function summarizePreviousEmployment(previousEmployment?: Candidate["previousEmployment"]) {
+  if (!previousEmployment?.length) return "-";
+  return previousEmployment
+    .map((job) => {
+      const company = typeof job.company === "string" ? job.company : undefined;
+      const title =
+        typeof job.title === "string"
+          ? job.title
+          : typeof job.role === "string"
+          ? job.role
+          : undefined;
+      return [company, title].filter(Boolean).join(" - ");
+    })
+    .filter(Boolean)
+    .join(", ") || "-";
+}
+
 export function CandidateTable({
   candidates,
   onSelectCandidate,
+  onEditCandidate,
+  onDeleteCandidate,
   selectedId,
   isLoading,
   selectedIds = [],
   onSelectionChange,
 }: CandidateTableProps) {
-  const [sortField, setSortField] = useState<
-    "name" | "experience"
-  >("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<SortField>("updatedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const handleSort = (field: typeof sortField) => {
+  const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("asc");
+      return;
     }
+    setSortField(field);
+    setSortDir(field === "name" ? "asc" : "desc");
   };
 
-  const SortIcon = ({ field }: { field: typeof sortField }) => {
+  const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
     return sortDir === "asc" ? (
       <ChevronUp className="w-3 h-3" />
@@ -61,49 +95,41 @@ export function CandidateTable({
       case "experience":
         comparison = a.experience - b.experience;
         break;
+      case "updatedAt":
+        comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+        break;
     }
     return sortDir === "asc" ? comparison : -comparison;
   });
 
   const handleCheckboxChange = (candidateId: string, checked: boolean) => {
     if (!onSelectionChange) return;
-
-    if (checked) {
-      onSelectionChange([...selectedIds, candidateId]);
-    } else {
-      onSelectionChange(selectedIds.filter((id) => id !== candidateId));
-    }
+    onSelectionChange(
+      checked ? [...selectedIds, candidateId] : selectedIds.filter((id) => id !== candidateId)
+    );
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (!onSelectionChange) return;
-
-    if (checked) {
-      onSelectionChange(sortedCandidates.map((c) => c.id));
-    } else {
-      onSelectionChange([]);
-    }
+    onSelectionChange(checked ? sortedCandidates.map((candidate) => candidate.id) : []);
   };
 
   const allSelected =
-    sortedCandidates.length > 0 &&
-    selectedIds.length === sortedCandidates.length;
+    sortedCandidates.length > 0 && selectedIds.length === sortedCandidates.length;
   const someSelected =
     selectedIds.length > 0 && selectedIds.length < sortedCandidates.length;
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse-subtle text-muted-foreground">
-          Loading candidates...
-        </div>
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        Loading candidates...
       </div>
     );
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="data-table">
+      <table className="data-table min-w-[2200px]">
         <thead>
           <tr>
             {onSelectionChange && (
@@ -111,39 +137,62 @@ export function CandidateTable({
                 <Checkbox
                   checked={allSelected}
                   onCheckedChange={handleSelectAll}
-                  className={cn(
-                    someSelected && "data-[state=unchecked]:bg-muted"
-                  )}
+                  className={cn(someSelected && "data-[state=unchecked]:bg-muted")}
                   aria-label="Select all candidates"
                 />
               </th>
             )}
-            <th
-              className="cursor-pointer select-none"
-              onClick={() => handleSort("name")}
-            >
+            <th className="cursor-pointer select-none" onClick={() => handleSort("name")}>
               <span className="flex items-center gap-1">
-                Candidate <SortIcon field="name" />
+                Name <SortIcon field="name" />
               </span>
             </th>
+            <th>Email</th>
+            <th>Phone</th>
             <th>Company</th>
+            <th>Location</th>
+            <th>Present Address</th>
+            <th>Permanent Address</th>
+            <th>Date of Birth</th>
+            <th>Key Skill</th>
             <th>Skills</th>
-            <th
-              className="cursor-pointer select-none"
-              onClick={() => handleSort("experience")}
-            >
+            <th>Previous Employment</th>
+            <th className="cursor-pointer select-none" onClick={() => handleSort("experience")}>
               <span className="flex items-center gap-1">
                 Experience <SortIcon field="experience" />
               </span>
             </th>
+            <th>Total Experience</th>
+            <th>Notice Period</th>
+            <th>Current CTC</th>
+            <th>Expected CTC</th>
+            <th>Source</th>
+            <th>Client</th>
+            <th>LinkedIn</th>
+            <th>Resume URL</th>
+            <th>Resume File Path</th>
             <th>Status</th>
-            <th>CTC</th>
-            <th className="w-10"></th>
+            <th>Selected</th>
+            <th>Direct Interview</th>
+            <th>Blacklisted</th>
+            <th>Leaver</th>
+            <th>Remark</th>
+            <th>Assigned User</th>
+            <th>Candidate ID</th>
+            <th>Client ID</th>
+            <th className="cursor-pointer select-none" onClick={() => handleSort("updatedAt")}>
+              <span className="flex items-center gap-1">
+                Updated <SortIcon field="updatedAt" />
+              </span>
+            </th>
+            <th>Created</th>
+            <th className="w-12">Actions</th>
           </tr>
         </thead>
         <tbody>
           {sortedCandidates.map((candidate) => {
             const isChecked = selectedIds.includes(candidate.id);
+
             return (
               <tr
                 key={candidate.id}
@@ -166,81 +215,84 @@ export function CandidateTable({
                   </td>
                 )}
                 <td>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                      {candidate.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </div>
-                    <div>
-                      <div className="font-medium">{candidate.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {candidate.email}
-                      </div>
-                    </div>
+                  <div className="min-w-[180px]">
+                    <div className="font-medium">{candidate.name}</div>
+                    {candidate.potentialDuplicates?.length ? (
+                      <Badge variant="warning" className="mt-1">
+                        Potential Duplicate
+                      </Badge>
+                    ) : null}
                   </div>
                 </td>
+                <td>{candidate.email || "-"}</td>
+                <td>{candidate.phone || "-"}</td>
+                <td>{candidate.company || "-"}</td>
+                <td>{candidate.location || "-"}</td>
+                <td className="max-w-[220px] whitespace-normal break-words">
+                  {candidate.presentAddress || "-"}
+                </td>
+                <td className="max-w-[220px] whitespace-normal break-words">
+                  {candidate.permanentAddress || "-"}
+                </td>
+                <td>{formatDate(candidate.dateOfBirth)}</td>
+                <td>{candidate.keySkill || "-"}</td>
                 <td>
-                  <span className="text-sm text-muted-foreground">
-                    {candidate.company || "-"}
-                  </span>
+                  <SkillsOverflowTooltip skills={candidate.skills} visibleCount={3} />
+                </td>
+                <td className="max-w-[260px] whitespace-normal break-words">
+                  {summarizePreviousEmployment(candidate.previousEmployment)}
+                </td>
+                <td>{candidate.experience} yrs</td>
+                <td>{candidate.totalExperienceYears ?? "-"}</td>
+                <td>
+                  {candidate.noticePeriodDays != null ? `${candidate.noticePeriodDays} days` : "-"}
+                </td>
+                <td>{formatCurrency(candidate.ctcCurrent)}</td>
+                <td>{formatCurrency(candidate.ctcExpected)}</td>
+                <td>{candidate.source || "-"}</td>
+                <td>{candidate.client || "-"}</td>
+                <td className="max-w-[220px] whitespace-normal break-all">
+                  {candidate.linkedinUrl ? (
+                    <a
+                      href={candidate.linkedinUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {candidate.linkedinUrl}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td className="max-w-[220px] whitespace-normal break-all">
+                  {candidate.resumeUrl || "-"}
+                </td>
+                <td className="max-w-[220px] whitespace-normal break-all">
+                  {candidate.resumeFilePath || "-"}
                 </td>
                 <td>
-                  <SkillsOverflowTooltip
-                    skills={candidate.skills}
-                    visibleCount={3}
+                  <StatusBadge status={candidate.currentStatus} type="candidate" />
+                </td>
+                <td>{candidate.currentStatus === "selected" ? "Yes" : "No"}</td>
+                <td>{candidate.isDirectInterview ? "Yes" : "No"}</td>
+                <td>{candidate.isBlacklisted ? "Yes" : "No"}</td>
+                <td>{candidate.isLeaver ? "Yes" : "No"}</td>
+                <td className="max-w-[240px] whitespace-normal break-words">
+                  {candidate.remark || "-"}
+                </td>
+                <td className="font-mono text-xs">{candidate.assignedUserId || "-"}</td>
+                <td className="font-mono text-xs">{candidate.id}</td>
+                <td className="font-mono text-xs">{candidate.clientId}</td>
+                <td>{formatDateTime(candidate.updatedAt)}</td>
+                <td>{formatDateTime(candidate.createdAt)}</td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  <CandidateActionsMenu
+                    candidate={candidate}
+                    onEdit={onEditCandidate}
+                    onDelete={onDeleteCandidate}
                   />
-                </td>
-                <td>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-mono text-sm font-medium">
-                      {candidate.experience} yrs
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <StatusBadge
-                    status={candidate.currentStatus}
-                    type="candidate"
-                  />
-                </td>
-                <td>
-                  <div className="text-xs space-y-1">
-                    {candidate.ctcCurrent ? (
-                      <div>
-                        Current:{" "}
-                        <span className="font-medium">
-                          ₹{candidate.ctcCurrent.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground">
-                        Current: <span className="italic">Not Disclosed</span>
-                      </div>
-                    )}
-                    {candidate.ctcExpected ? (
-                      <div>
-                        Expected:{" "}
-                        <span className="font-medium">
-                          ₹{candidate.ctcExpected.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground">
-                        Expected: <span className="italic">Not Disclosed</span>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
                 </td>
               </tr>
             );
@@ -249,7 +301,7 @@ export function CandidateTable({
       </table>
 
       {sortedCandidates.length === 0 && (
-        <div className="flex items-center justify-center h-32 text-muted-foreground">
+        <div className="flex h-32 items-center justify-center text-muted-foreground">
           No candidates found
         </div>
       )}

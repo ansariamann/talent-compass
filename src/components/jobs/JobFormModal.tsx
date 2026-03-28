@@ -4,11 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
+import type { Client, JobInput } from '@/types/ats';
 
-interface JobFormData {
-  title: string;
-  companyName: string;
+interface JobFormData extends JobInput {
   postingDate?: string;
   requirements?: string;
   experienceRequired?: number;
@@ -19,11 +25,13 @@ interface JobFormData {
 interface JobFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  clients: Client[];
   onSubmit: (data: JobFormData) => Promise<void> | void;
 }
 
-export function JobFormModal({ open, onOpenChange, onSubmit }: JobFormModalProps) {
+export function JobFormModal({ open, onOpenChange, clients, onSubmit }: JobFormModalProps) {
   const [formData, setFormData] = useState<JobFormData>({
+    clientId: '',
     title: '',
     companyName: '',
     postingDate: '',
@@ -36,6 +44,7 @@ export function JobFormModal({ open, onOpenChange, onSubmit }: JobFormModalProps
   useEffect(() => {
     if (!open) {
       setFormData({
+        clientId: '',
         title: '',
         companyName: '',
         postingDate: '',
@@ -54,8 +63,8 @@ export function JobFormModal({ open, onOpenChange, onSubmit }: JobFormModalProps
       toast.error('Job title is required');
       return;
     }
-    if (!formData.companyName.trim()) {
-      toast.error('Company name is required');
+    if (!formData.clientId) {
+      toast.error('Client is required');
       return;
     }
 
@@ -92,14 +101,32 @@ export function JobFormModal({ open, onOpenChange, onSubmit }: JobFormModalProps
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="companyName">Company Name *</Label>
-              <Input
-                id="companyName"
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                placeholder="Acme Corp"
-                className="mt-1"
-              />
+              <Label htmlFor="clientId">Client *</Label>
+              <Select
+                value={formData.clientId}
+                onValueChange={(clientId) => {
+                  const selectedClient = clients.find((client) => client.id === clientId);
+                  setFormData({
+                    ...formData,
+                    clientId,
+                    companyName: selectedClient?.name || '',
+                  });
+                }}
+              >
+                <SelectTrigger id="clientId" className="mt-1">
+                  <SelectValue placeholder="Select an existing client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Companies on jobs come from clients only. Create a new client first if it is missing.
+              </p>
             </div>
 
             <div>

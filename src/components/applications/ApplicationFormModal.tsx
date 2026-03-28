@@ -13,14 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Form,
@@ -72,6 +64,7 @@ export function ApplicationFormModal({
 }: ApplicationFormModalProps) {
   const isEditing = Boolean(application);
   const [candidatePickerOpen, setCandidatePickerOpen] = useState(false);
+  const [candidateQuery, setCandidateQuery] = useState("");
 
   const createForm = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
@@ -100,15 +93,32 @@ export function ApplicationFormModal({
         clientId: currentClientId || clients[0]?.id || "",
         jobTitle: "",
       });
+      setCandidateQuery("");
     }
   }, [application, clients, createForm, currentClientId, editForm, isEditing, open]);
 
   const selectedClientId = createForm.watch("clientId");
   const selectedCandidateId = createForm.watch("candidateId");
 
+  const availableCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.currentStatus !== "selected"),
+    [candidates]
+  );
+
+  const filteredCandidates = useMemo(() => {
+    const query = candidateQuery.trim().toLowerCase();
+    if (!query) return availableCandidates;
+
+    return availableCandidates.filter((candidate) =>
+      [candidate.name, candidate.email, candidate.company, candidate.location]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query))
+    );
+  }, [availableCandidates, candidateQuery]);
+
   const selectedCandidate = useMemo(
-    () => candidates.find((candidate) => candidate.id === selectedCandidateId),
-    [candidates, selectedCandidateId]
+    () => availableCandidates.find((candidate) => candidate.id === selectedCandidateId),
+    [availableCandidates, selectedCandidateId]
   );
 
   const handleCreate = async (values: CreateFormValues) => {
@@ -134,6 +144,8 @@ export function ApplicationFormModal({
       editForm.reset({
         jobTitle: application?.jobTitle || "",
       });
+      setCandidatePickerOpen(false);
+      setCandidateQuery("");
     }
     onOpenChange(nextOpen);
   };
@@ -190,7 +202,15 @@ export function ApplicationFormModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Candidate</FormLabel>
-                    <Popover open={candidatePickerOpen} onOpenChange={setCandidatePickerOpen}>
+                    <Popover
+                      open={candidatePickerOpen}
+                      onOpenChange={(nextOpen) => {
+                        setCandidatePickerOpen(nextOpen);
+                        if (!nextOpen) {
+                          setCandidateQuery("");
+                        }
+                      }}
+                    >
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -210,39 +230,49 @@ export function ApplicationFormModal({
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search candidate by name or email..." />
-                          <CommandList>
-                            <CommandEmpty>No candidate found.</CommandEmpty>
-                            <CommandGroup>
-                              {candidates.map((candidate) => (
-                                <CommandItem
-                                  key={candidate.id}
-                                  value={`${candidate.name} ${candidate.email}`}
-                                  onSelect={() => {
-                                    field.onChange(candidate.id);
-                                    setCandidatePickerOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      candidate.id === field.value ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <div className="flex min-w-0 flex-col">
-                                    <span className="truncate">{candidate.name}</span>
-                                    {candidate.email && (
-                                      <span className="truncate text-xs text-muted-foreground">
-                                        {candidate.email}
-                                      </span>
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
+                        <div className="border-b p-2">
+                          <Input
+                            value={candidateQuery}
+                            onChange={(event) => setCandidateQuery(event.target.value)}
+                            placeholder="Search candidate by name, email, company or location..."
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto p-1">
+                          {filteredCandidates.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              No candidate found.
+                            </div>
+                          ) : (
+                            filteredCandidates.map((candidate) => (
+                              <button
+                                key={candidate.id}
+                                type="button"
+                                className="flex w-full items-center rounded-sm px-2 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => {
+                                  field.onChange(candidate.id);
+                                  setCandidatePickerOpen(false);
+                                  setCandidateQuery("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 shrink-0",
+                                    candidate.id === field.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex min-w-0 flex-col">
+                                  <span className="truncate">{candidate.name}</span>
+                                  <span className="truncate text-xs text-muted-foreground">
+                                    {[candidate.email, candidate.company, candidate.location]
+                                      .filter(Boolean)
+                                      .join(" • ") || "No additional details"}
+                                  </span>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
                       </PopoverContent>
                     </Popover>
                     <FormMessage />

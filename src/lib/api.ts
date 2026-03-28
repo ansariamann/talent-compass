@@ -17,8 +17,14 @@ import type {
   ParseJobResponse,
   Job,
   JobFilters,
+  JobInput,
+  ApplicationTimeline,
+  InterviewFeedbackPayload,
+  LeftCompanyPayload,
   DirectInterviewStats,
   DirectInterviewRecord,
+  RejectPayload,
+  ScheduleInterviewPayload,
 } from '@/types/ats';
 import { getAuthToken, clearAuthToken } from '@/lib/authToken';
 
@@ -39,6 +45,27 @@ export interface ActivityLogFilters {
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+function normalizeApiDate(value?: string | null): string | undefined {
+  if (!value) return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(trimmed)) {
+    return `${trimmed.replace(' ', 'T')}Z`;
+  }
+
+  return trimmed;
+}
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -121,9 +148,16 @@ interface BackendCandidate {
   experience?: Record<string, unknown> | null;
   ctc_current?: number | null;
   ctc_expected?: number | null;
+  total_experience_years?: number | null;
+  notice_period_days?: number | null;
+  source?: string | null;
+  linkedin_url?: string | null;
+  selected_client_name?: string | null;
   resume_url?: string | null;
   resume_file_path?: string | null;
+  assigned_user_id?: string | null;
   status: string;
+  is_blacklisted?: boolean | null;
   is_direct_interview?: boolean | null;
   remark?: string | null;
   candidate_hash?: string | null;
@@ -137,6 +171,8 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     'ACTIVE': 'new',
     'INACTIVE': 'on_hold',
     'LEFT': 'withdrawn',
+    'LEFT_COMPANY': 'withdrawn',
+    'INTERVIEW_SCHEDULED': 'interview_scheduled',
     'SELECTED': 'selected',
     'HIRED': 'hired',
     'REJECTED': 'rejected',
@@ -156,9 +192,14 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     : undefined;
   const ctcCurrent = backend.ctc_current == null ? undefined : Number(backend.ctc_current);
   const ctcExpected = backend.ctc_expected == null ? undefined : Number(backend.ctc_expected);
+  const totalExperienceYears =
+    backend.total_experience_years == null ? undefined : Number(backend.total_experience_years);
+  const noticePeriodDays =
+    backend.notice_period_days == null ? undefined : Number(backend.notice_period_days);
 
   return {
     id: backend.id,
+    clientId: backend.client_id,
     name: backend.name,
     email: backend.email || '',
     phone: backend.phone || undefined,
@@ -169,19 +210,26 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     dateOfBirth: backend.date_of_birth || undefined,
     previousEmployment: backend.previous_employment || undefined,
     keySkill: backend.key_skill || undefined,
+    resumeFilePath: backend.resume_file_path || undefined,
+    assignedUserId: backend.assigned_user_id || undefined,
     skills: Array.isArray(skills) ? skills : [],
     experience,
+    totalExperienceYears,
+    noticePeriodDays,
+    source: backend.source || undefined,
+    linkedinUrl: backend.linkedin_url || undefined,
+    client: backend.selected_client_name || undefined,
     currentStatus: statusMap[backend.status] || 'new',
     resumeUrl,
     resumeParsed: undefined,
-    isBlacklisted: backend.status === 'REJECTED',
+    isBlacklisted: Boolean(backend.is_blacklisted),
     isLeaver: backend.status === 'LEFT',
     remark: backend.remark || undefined,
     ctcCurrent,
     ctcExpected,
     isDirectInterview: Boolean(backend.is_direct_interview),
-    createdAt: backend.created_at,
-    updatedAt: backend.updated_at,
+    createdAt: normalizeApiDate(backend.created_at) || backend.created_at,
+    updatedAt: normalizeApiDate(backend.updated_at) || backend.updated_at,
   };
 }
 
@@ -215,6 +263,13 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.keySkill !== undefined) result.key_skill = frontend.keySkill;
   if (frontend.skills !== undefined) result.skills = { skills: frontend.skills };
   if (frontend.experience !== undefined) result.experience = { years: frontend.experience };
+  if (frontend.totalExperienceYears !== undefined) result.total_experience_years = frontend.totalExperienceYears;
+  if (frontend.noticePeriodDays !== undefined) result.notice_period_days = frontend.noticePeriodDays;
+  if (frontend.source !== undefined) result.source = frontend.source;
+  if (frontend.linkedinUrl !== undefined) result.linkedin_url = frontend.linkedinUrl;
+  if (frontend.client !== undefined) result.selected_client_name = frontend.client;
+  if (frontend.resumeFilePath !== undefined) result.resume_file_path = frontend.resumeFilePath;
+  if (frontend.assignedUserId !== undefined) result.assigned_user_id = frontend.assignedUserId;
   if (frontend.currentStatus !== undefined) result.status = statusMap[frontend.currentStatus] || 'ACTIVE';
   if (frontend.isDirectInterview !== undefined) result.is_direct_interview = frontend.isDirectInterview;
   if (frontend.remark !== undefined) result.remark = frontend.remark;
@@ -229,11 +284,14 @@ interface BackendApplication {
   id: string;
   candidate_id: string;
   client_id: string;
+  client_name?: string | null;
   job_title?: string | null;
   status: string;
-  is_flagged: boolean;
+  flagged_for_review?: boolean;
+  is_flagged?: boolean;
   flag_reason?: string | null;
   is_deleted: boolean;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -248,6 +306,7 @@ interface BackendJob {
   experience_required?: number | null;
   salary_lpa?: number | null;
   location?: string | null;
+  submitted_by_client?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -271,12 +330,19 @@ function transformApplication(backend: BackendApplication): Application {
   // Map backend status to frontend status
   const statusMap: Record<string, Application['status']> = {
     'NEW': 'pending',
+    'RECEIVED': 'pending',
     'IN_REVIEW': 'in_review',
+    'SCREENING': 'in_review',
     'SHORTLISTED': 'shortlisted',
+    'INTERVIEW_SCHEDULED': 'shortlisted',
     'INTERVIEW': 'interview',
+    'INTERVIEWED': 'interview',
     'OFFER': 'offer',
+    'OFFER_MADE': 'offer',
     'ACCEPTED': 'accepted',
+    'HIRED': 'accepted',
     'DECLINED': 'declined',
+    'WITHDRAWN': 'declined',
     'REJECTED': 'rejected',
   };
 
@@ -284,13 +350,20 @@ function transformApplication(backend: BackendApplication): Application {
     id: backend.id,
     candidateId: backend.candidate_id,
     clientId: backend.client_id,
+    client: backend.client_name ? {
+      id: backend.client_id,
+      name: backend.client_name,
+      isActive: true,
+      isRegistered: false,
+      createdAt: normalizeApiDate(backend.created_at) || backend.created_at,
+    } as Client : undefined,
     jobTitle: backend.job_title || 'Unknown Position',
     status: statusMap[backend.status] || 'pending',
-    submittedAt: backend.created_at,
-    lastActivityAt: backend.updated_at,
+    submittedAt: normalizeApiDate(backend.created_at) || backend.created_at,
+    lastActivityAt: normalizeApiDate(backend.updated_at) || backend.updated_at,
     notes: [],
     auditLog: [],
-    isFlagged: backend.is_flagged,
+    isFlagged: backend.flagged_for_review ?? backend.is_flagged ?? false,
     flagReason: backend.flag_reason || undefined,
     isDeleted: backend.is_deleted,
   };
@@ -308,8 +381,9 @@ function transformJob(backend: BackendJob): Job {
     experienceRequired: backend.experience_required ?? undefined,
     salaryLpa,
     location: backend.location || undefined,
-    createdAt: backend.created_at,
-    updatedAt: backend.updated_at,
+    submittedByClient: backend.submitted_by_client ?? false,
+    createdAt: normalizeApiDate(backend.created_at) || backend.created_at,
+    updatedAt: normalizeApiDate(backend.updated_at) || backend.updated_at,
   };
 }
 
@@ -320,7 +394,7 @@ function transformDirectInterviewRecord(backend: BackendDirectInterviewRecord): 
     clientId: backend.client_id,
     companyId: backend.company_id,
     interviewerId: backend.interviewer_id,
-    interviewDate: backend.interview_date,
+    interviewDate: normalizeApiDate(backend.interview_date) || backend.interview_date,
     position: backend.position || undefined,
     skills: backend.skills || undefined,
     notes: backend.notes || undefined,
@@ -447,7 +521,7 @@ export const candidatesApi = {
   update: async (id: string, data: Partial<Candidate>): Promise<Candidate> => {
     const backendData = toBackendCandidate(data);
     const response = await fetchWithAuth<BackendCandidate>(`/candidates/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(backendData),
     });
     return transformCandidate(response);
@@ -483,6 +557,53 @@ export const candidatesApi = {
     total_candidates: number;
     by_status: Record<string, number>;
   }>('/candidates/statistics'),
+  getTimeline: async (id: string): Promise<ApplicationTimeline[]> => {
+    return fetchWithAuth<ApplicationTimeline[]>(`/candidates/${id}/timeline`);
+  },
+  scheduleInterview: async (payload: ScheduleInterviewPayload): Promise<Candidate> => {
+    const { candidateId, mode, ...rest } = payload;
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/${candidateId}/schedule-interview`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...rest,
+        interviewType: mode,
+      }),
+    });
+    return transformCandidate(response);
+  },
+  submitFeedback: async (payload: InterviewFeedbackPayload): Promise<Candidate> => {
+    const { candidateId, ...rest } = payload;
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/${candidateId}/submit-feedback`, {
+      method: 'POST',
+      body: JSON.stringify(rest),
+    });
+    return transformCandidate(response);
+  },
+  selectForWorkflow: async (candidateId: string, notes?: string): Promise<Candidate> => {
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/${candidateId}/select`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+    return transformCandidate(response);
+  },
+  rejectForWorkflow: async (payload: RejectPayload): Promise<Candidate> => {
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/${payload.candidateId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({
+        reason: payload.reason,
+        feedback: payload.feedback,
+      }),
+    });
+    return transformCandidate(response);
+  },
+  markLeftCompany: async (payload: LeftCompanyPayload): Promise<Candidate> => {
+    const { candidateId, ...rest } = payload;
+    const response = await fetchWithAuth<BackendCandidate>(`/candidates/${candidateId}/left-company`, {
+      method: 'POST',
+      body: JSON.stringify(rest),
+    });
+    return transformCandidate(response);
+  },
   recordDirectInterview: async (
     candidateId: string,
     data: { interviewDate: string; companyId: string; position?: string; skills?: string[]; notes?: string; rating?: number }
@@ -606,10 +727,10 @@ export const applicationsApi = {
         'pending': 'NEW',
         'in_review': 'IN_REVIEW',
         'shortlisted': 'SHORTLISTED',
-        'interview': 'INTERVIEW',
-        'offer': 'OFFER',
-        'accepted': 'ACCEPTED',
-        'declined': 'DECLINED',
+        'interview': 'INTERVIEWED',
+        'offer': 'OFFER_MADE',
+        'accepted': 'HIRED',
+        'declined': 'WITHDRAWN',
         'rejected': 'REJECTED',
       };
       backendData.status = statusMap[data.status] || data.status;
@@ -635,7 +756,7 @@ export const applicationsApi = {
   },
 
   flag: async (id: string, reason?: string): Promise<Application> => {
-    const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    const params = reason ? `?flag_reason=${encodeURIComponent(reason)}` : '';
     const response = await fetchWithAuth<BackendApplication>(`/applications/${id}/flag${params}`, {
       method: 'POST',
     });
@@ -652,13 +773,13 @@ export const applicationsApi = {
   updateStatus: async (id: string, status: string, note?: string): Promise<Application> => {
     // Map frontend status to backend
     const statusMap: Record<string, string> = {
-      'pending': 'NEW',
-      'in_review': 'IN_REVIEW',
-      'shortlisted': 'SHORTLISTED',
-      'interview': 'INTERVIEW',
-      'offer': 'OFFER',
-      'accepted': 'ACCEPTED',
-      'declined': 'DECLINED',
+      'pending': 'RECEIVED',
+      'in_review': 'SCREENING',
+      'shortlisted': 'INTERVIEW_SCHEDULED',
+      'interview': 'INTERVIEWED',
+      'offer': 'OFFER_MADE',
+      'accepted': 'HIRED',
+      'declined': 'WITHDRAWN',
       'rejected': 'REJECTED',
     };
 
@@ -669,7 +790,7 @@ export const applicationsApi = {
 
     const response = await fetchWithAuth<BackendApplication>(
       `/applications/${id}/status?${params}`,
-      { method: 'PATCH' }
+      { method: 'PUT' }
     );
     return transformApplication(response);
   },
@@ -723,16 +844,9 @@ export const jobsApi = {
     return transformJob(response);
   },
 
-  create: async (data: {
-    title: string;
-    companyName: string;
-    postingDate?: string;
-    requirements?: string;
-    experienceRequired?: number;
-    salaryLpa?: number;
-    location?: string;
-  }): Promise<Job> => {
+  create: async (data: JobInput): Promise<Job> => {
     const backendData = {
+      client_id: data.clientId,
       title: data.title,
       company_name: data.companyName,
       posting_date: data.postingDate,
@@ -843,13 +957,22 @@ export const emailApi = {
 interface BackendClient {
   id: string;
   name: string;
+  industry?: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  address?: string | null;
+  website?: string | null;
   email_domain?: string | null;
+  is_active?: boolean | null;
   created_at: string;
   updated_at: string;
 }
 
 interface BackendClientProvisionResponse extends BackendClient {
   credentials_generated?: boolean;
+  credentials_emailed?: boolean;
+  generated_email_path?: string | null;
   admin_email?: string | null;
   admin_password?: string | null;
   portal_login_url?: string | null;
@@ -859,10 +982,13 @@ function toFrontendClient(backend: BackendClient): Client {
   return {
     id: backend.id,
     name: backend.name,
-    industry: 'General',
-    contactEmail: backend.email_domain ? `admin@${backend.email_domain}` : '',
-    contactName: `${backend.name} Admin`,
-    isActive: true,
+    industry: backend.industry || undefined,
+    contactEmail: backend.contact_email || undefined,
+    contactName: backend.contact_name || undefined,
+    contactPhone: backend.contact_phone || undefined,
+    address: backend.address || undefined,
+    website: backend.website || undefined,
+    isActive: backend.is_active ?? true,
     isRegistered: false,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
@@ -893,7 +1019,7 @@ export const clientsApi = {
   },
   create: async (
     data: Partial<Client>
-  ): Promise<Client & { provisionedCredentials?: { email: string; password: string; loginUrl: string } }> => {
+  ): Promise<Client & { provisionedCredentials?: { email: string; password: string; loginUrl: string; emailed: boolean; generatedEmailPath?: string } }> => {
     const emailDomain = data.contactEmail?.includes('@')
       ? data.contactEmail.split('@')[1]
       : undefined;
@@ -901,7 +1027,14 @@ export const clientsApi = {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,
+        industry: data.industry,
+        contact_name: data.contactName,
+        contact_email: data.contactEmail,
+        contact_phone: data.contactPhone,
+        address: data.address,
+        website: data.website,
         email_domain: emailDomain,
+        is_active: data.isActive ?? true,
       }),
     });
     const frontend = toFrontendClient(response);
@@ -912,6 +1045,8 @@ export const clientsApi = {
           email: response.admin_email,
           password: response.admin_password,
           loginUrl: response.portal_login_url || 'http://localhost:8080/login',
+          emailed: response.credentials_emailed ?? false,
+          generatedEmailPath: response.generated_email_path || undefined,
         },
       };
     }
@@ -925,7 +1060,14 @@ export const clientsApi = {
       method: 'PATCH',
       body: JSON.stringify({
         name: data.name,
+        industry: data.industry,
+        contact_name: data.contactName,
+        contact_email: data.contactEmail,
+        contact_phone: data.contactPhone,
+        address: data.address,
+        website: data.website,
         email_domain: emailDomain,
+        is_active: data.isActive,
       }),
     });
     return toFrontendClient(response);
@@ -970,8 +1112,8 @@ export function createSSEConnection(
 ): () => void {
   const token = getAuthToken();
   const url = token
-    ? `${API_BASE}/events/stream?token=${token}`
-    : `${API_BASE}/events/stream`;
+    ? `${API_BASE}/sse/events?token=${token}`
+    : `${API_BASE}/sse/events`;
 
   const eventSource = new EventSource(url);
 

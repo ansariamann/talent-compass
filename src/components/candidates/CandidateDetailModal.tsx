@@ -1,28 +1,39 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
-  Mail,
-  Phone,
-  FileText,
   Briefcase,
-  GraduationCap,
   Calendar,
+  Clock,
   Download,
   ExternalLink,
-  X,
+  FileText,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  Star,
+  User,
+  Video,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
+import { candidatesApi } from '@/lib/api';
+import { useApplicationsByCandidate } from '@/hooks/useApplications';
+import { useClients } from '@/hooks/useClients';
+import type { ApplicationTimeline, Candidate } from '@/types/ats';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusBadge } from './StatusBadge';
-import type { Candidate } from '@/types/ats';
+import { CandidateWorkflowActions } from './CandidateWorkflowActions';
 
 interface CandidateDetailModalProps {
   candidate: Candidate | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCandidateUpdated: (candidate: Candidate) => void;
 }
 
 function getMostRecentWorkSummary(candidate: Candidate): { title?: string; company?: string; dates?: string } | null {
@@ -34,16 +45,41 @@ function getMostRecentWorkSummary(candidate: Candidate): { title?: string; compa
   return { title: first.title, company: first.company, dates };
 }
 
-export function CandidateDetailModal({ candidate, open, onOpenChange }: CandidateDetailModalProps) {
+export function CandidateDetailModal({
+  candidate,
+  open,
+  onOpenChange,
+  onCandidateUpdated,
+}: CandidateDetailModalProps) {
+  const [timeline, setTimeline] = useState<ApplicationTimeline[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const { data: applications = [], refetch: refetchApplications } = useApplicationsByCandidate(candidate?.id);
+  const { data: clients = [] } = useClients();
+
   const workSummary = useMemo(() => (candidate ? getMostRecentWorkSummary(candidate) : null), [candidate]);
+
+  useEffect(() => {
+    if (!candidate?.id || !open) {
+      setTimeline([]);
+      return;
+    }
+
+    setTimelineLoading(true);
+    candidatesApi
+      .getTimeline(candidate.id)
+      .then(setTimeline)
+      .catch(() => setTimeline([]))
+      .finally(() => setTimelineLoading(false));
+  }, [candidate?.id, open]);
+
   if (!candidate) return null;
 
   const resumeUrl = candidate.resumeUrl;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[85vh] p-0 gap-0 flex flex-col bg-card border-border overflow-hidden">
-        <DialogHeader className="p-4 border-b border-border flex-shrink-0">
+      <DialogContent className="max-w-5xl h-[88vh] p-0 gap-0 flex flex-col bg-card border-border overflow-hidden">
+        <DialogHeader className="p-4 border-b border-border">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <DialogTitle className="text-xl font-bold flex items-center gap-3">
@@ -97,21 +133,15 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
                   </Button>
                 </>
               )}
-              <Button variant="ghost" size="sm" className="gap-2" onClick={() => onOpenChange(false)}>
-                <X className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0">
           <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-4 h-auto py-0">
-            <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary py-3">
-              Profile
-            </TabsTrigger>
-            <TabsTrigger value="resume" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary py-3">
-              Resume
-            </TabsTrigger>
+            <TabsTrigger value="profile" className="rounded-none py-3">Profile</TabsTrigger>
+            <TabsTrigger value="resume" className="rounded-none py-3">Resume</TabsTrigger>
+            <TabsTrigger value="timeline" className="rounded-none py-3">Timeline</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1">
@@ -162,7 +192,7 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
               {candidate.remark && (
                 <section>
                   <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-primary" />
+                    <MessageSquare className="w-4 h-4 text-primary" />
                     Notes
                   </h3>
                   <Separator className="my-3" />
@@ -205,15 +235,12 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
                       )}
                       {candidate.resumeParsed.education.length > 0 && (
                         <div className="rounded-lg border border-border bg-card p-4">
-                          <div className="text-sm font-semibold flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-primary" />
-                            Education
-                          </div>
+                          <div className="text-sm font-semibold">Education</div>
                           <div className="mt-3 text-sm text-muted-foreground">
-                            {candidate.resumeParsed.education.slice(0, 2).map((e, i) => (
-                              <div key={i} className="mb-2">
-                                <div className="font-medium text-foreground">{e.institution}</div>
-                                <div>{e.degree} in {e.field} ({e.year})</div>
+                            {candidate.resumeParsed.education.slice(0, 2).map((education, index) => (
+                              <div key={index} className="mb-2">
+                                <div className="font-medium text-foreground">{education.institution}</div>
+                                <div>{education.degree} in {education.field} ({education.year})</div>
                               </div>
                             ))}
                           </div>
@@ -221,16 +248,13 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
                       )}
                       {candidate.resumeParsed.workHistory.length > 0 && (
                         <div className="rounded-lg border border-border bg-card p-4">
-                          <div className="text-sm font-semibold flex items-center gap-2">
-                            <Briefcase className="w-4 h-4 text-primary" />
-                            Work History
-                          </div>
+                          <div className="text-sm font-semibold">Work History</div>
                           <div className="mt-3 text-sm text-muted-foreground">
-                            {candidate.resumeParsed.workHistory.slice(0, 3).map((j, i) => (
-                              <div key={i} className="mb-3">
-                                <div className="font-medium text-foreground">{j.title}</div>
-                                <div>{j.company}</div>
-                                <div className="text-xs font-mono mt-1">{j.startDate} - {j.endDate || 'Present'}</div>
+                            {candidate.resumeParsed.workHistory.slice(0, 3).map((job, index) => (
+                              <div key={index} className="mb-3">
+                                <div className="font-medium text-foreground">{job.title}</div>
+                                <div>{job.company}</div>
+                                <div className="text-xs font-mono mt-1">{job.startDate} - {job.endDate || 'Present'}</div>
                               </div>
                             ))}
                           </div>
@@ -250,8 +274,104 @@ export function CandidateDetailModal({ candidate, open, onOpenChange }: Candidat
                 </div>
               )}
             </TabsContent>
+
+            <TabsContent value="timeline" className="p-6 mt-0">
+              {timelineLoading ? (
+                <div className="py-8 text-center text-muted-foreground">Loading timeline...</div>
+              ) : timeline.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">No timeline events yet.</div>
+              ) : (
+                <div className="space-y-4">
+                  {timeline.map((event) => {
+                    const isInterview = event.eventType === 'interview_round';
+                    const isFeedback = event.eventType === 'feedback';
+
+                    const icon = isInterview ? (
+                      event.interviewDetails?.mode === 'video' ? <Video className="h-3.5 w-3.5" /> :
+                      event.interviewDetails?.mode === 'phone' ? <Phone className="h-3.5 w-3.5" /> :
+                      <MapPin className="h-3.5 w-3.5" />
+                    ) : isFeedback ? (
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    ) : (
+                      <Clock className="h-3.5 w-3.5" />
+                    );
+
+                    return (
+                      <div key={event.id} className="flex gap-4">
+                        <div className="relative flex flex-col items-center">
+                          <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                          <div className="flex-1 w-px bg-border" />
+                        </div>
+                        <div className="pb-4 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground">
+                              {isInterview
+                                ? `Interview Round ${event.interviewDetails?.roundNumber || 1}`
+                                : isFeedback
+                                ? `Feedback - Round ${event.feedbackDetails?.roundNumber || 1}`
+                                : event.state || 'Status Update'}
+                            </p>
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              {icon}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {format(new Date(event.timestamp), 'MMM d, yyyy - h:mm a')}
+                            {event.actor !== 'system' && ` - by ${event.actor}`}
+                          </p>
+
+                          {isFeedback && event.feedbackDetails && (
+                            <div className="mt-2 flex items-center gap-1.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-3.5 w-3.5 ${star <= event.feedbackDetails!.rating ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground/30'}`}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          {event.note && (
+                            <div className="mt-2 rounded-md bg-muted p-2 text-sm text-muted-foreground">
+                              {event.note}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
           </ScrollArea>
         </Tabs>
+
+        <div className="border-t border-border p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" />
+              {applications.length} client application{applications.length === 1 ? '' : 's'}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              Updated {formatDistanceToNow(new Date(candidate.updatedAt), { addSuffix: true })}
+            </span>
+          </div>
+          <CandidateWorkflowActions
+            candidate={candidate}
+            timeline={timeline}
+            applications={applications}
+            clients={clients}
+            onUpdated={(updatedCandidate) => {
+              onCandidateUpdated(updatedCandidate);
+              candidatesApi.getTimeline(updatedCandidate.id).then(setTimeline).catch(() => undefined);
+            }}
+            onAcknowledged={() => {
+              refetchApplications();
+            }}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

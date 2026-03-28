@@ -74,10 +74,16 @@ export function useCreateClient() {
       toast.success('Client created successfully');
       const creds = (createdClient as any)?.provisionedCredentials;
       if (creds) {
-        toast.info(
-          `Client login created: ${creds.email} / ${creds.password} (${creds.loginUrl})`,
-          { duration: 12000 }
-        );
+        if (creds.emailed) {
+          toast.info(`Client credentials emailed to the client contact. Login: ${creds.email}`, {
+            duration: 8000,
+          });
+        } else {
+          toast.info(
+            `Client created. Generated email saved to text file${creds.generatedEmailPath ? `: ${creds.generatedEmailPath}` : ''}`,
+            { duration: 12000 }
+          );
+        }
       }
     },
     onError: (error) => {

@@ -79,13 +79,19 @@ export function AssignExistingInterviewDialog({
 
   useEffect(() => {
     if (!open) return;
+    const trimmedQuery = candidateQuery.trim();
+    if (!trimmedQuery) {
+      setCandidates([]);
+      setIsLoadingCandidates(false);
+      return;
+    }
     let cancelled = false;
     const loadCandidates = async () => {
       setIsLoadingCandidates(true);
       try {
         const response = await candidatesApi.list(
           {
-            search: candidateQuery,
+            search: trimmedQuery,
             status: ["new"],
           },
           1,
@@ -169,7 +175,15 @@ export function AssignExistingInterviewDialog({
                   <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingCandidates ? "Loading candidates..." : "Select candidate"} />
+                        <SelectValue
+                          placeholder={
+                            candidateQuery.trim().length === 0
+                              ? "Search for a candidate first"
+                              : isLoadingCandidates
+                              ? "Loading candidates..."
+                              : "Select candidate"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

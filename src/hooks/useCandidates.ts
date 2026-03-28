@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { candidatesApi } from '@/lib/api';
 import type { Candidate, CandidateFilters, PaginatedResponse } from '@/types/ats';
 
@@ -25,6 +25,7 @@ export function useCandidates(
         queryKey: candidateKeys.list(filters, page, pageSize),
         queryFn: () => candidatesApi.list(filters, page, pageSize),
         staleTime: 1000 * 60 * 5, // 5 minutes
+        placeholderData: keepPreviousData, // Keep old data visible while fetching new results
     });
 }
 

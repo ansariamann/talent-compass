@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, MapPin, Briefcase, IndianRupee, Calendar } from 'lucide-react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns';
 import type { Job } from '@/types/ats';
 import { extractPreferredSkills, extractRequiredSkills, formatExperienceYears, formatLpa, summarizeRequirements } from './jobText';
 
@@ -15,6 +15,7 @@ export function JobCard({
   const requiredSkills = extractRequiredSkills(job.requirements);
   const preferredSkills = extractPreferredSkills(job.requirements);
   const description = summarizeRequirements(job.requirements);
+  const isNewJob = differenceInDays(new Date(), parseISO(job.postingDate)) < 7;
 
   return (
     <Card
@@ -33,6 +34,18 @@ export function JobCard({
             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               <Building2 className="h-4 w-4" />
               <span className="truncate">{job.companyName}</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {job.submittedByClient && (
+                <Badge variant="outline" className="text-[11px]">
+                  Client Request
+                </Badge>
+              )}
+              {isNewJob && (
+                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 text-[11px]">
+                  New
+                </Badge>
+              )}
             </div>
           </div>
           <Badge variant="secondary" className="shrink-0">
@@ -98,4 +111,3 @@ export function JobCard({
     </Card>
   );
 }
-

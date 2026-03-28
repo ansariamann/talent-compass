@@ -6,10 +6,10 @@ import { StatusBadge } from '@/components/candidates/StatusBadge';
 import { ApplicationFormModal } from '@/components/applications/ApplicationFormModal';
 import { ApplicationActionsMenu } from '@/components/applications/ApplicationActionsMenu';
 import { ApplicationFiltersBar } from '@/components/applications/ApplicationFiltersBar';
+import { EnhancedSearch } from '@/components/search/EnhancedSearch';
 import {
   useApplications,
   useCreateApplication,
-  useUpdateApplication,
   useDeleteApplication,
   useRestoreApplication,
   useFlagApplication,
@@ -27,14 +27,12 @@ export default function ApplicationsPage() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<ApplicationFilters>({});
   const [formModalOpen, setFormModalOpen] = useState(false);
-  const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   const { user } = useAuth();
   const isClientScopedUser = user?.role === 'client_admin' || user?.role === 'client_user';
   const currentClientId = isClientScopedUser ? user?.client_id : undefined;
 
   // Mutations
   const createMutation = useCreateApplication();
-  const updateMutation = useUpdateApplication();
   const deleteMutation = useDeleteApplication();
   const restoreMutation = useRestoreApplication();
   const flagMutation = useFlagApplication();
@@ -47,6 +45,7 @@ export default function ApplicationsPage() {
     error: applicationsError,
     refetch
   } = useApplications(filters, page, 25);
+  const { data: applicationStatusResponse } = useApplications({}, 1, 1000);
 
   // Fetch clients
   const { data: clients = [] } = useClients(1000);
@@ -54,17 +53,21 @@ export default function ApplicationsPage() {
     ? clients.filter((client) => client.id === currentClientId)
     : clients;
 
-  // Fetch candidates to get candidate details
+  // Fetch candidates for the create modal
   const { data: candidatesResponse } = useCandidates({}, 1, 500);
 
-  // Build candidate lookup map
+  // Build client lookup map for fallback
+  const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  // Build candidate lookup map for fallback
   const candidateMap = new Map<string, Candidate>();
   candidatesResponse?.data.forEach(c => candidateMap.set(c.id, c));
 
-  // Get applications with candidate data attached
+  // Get applications with candidate and client data attached
   const applications = (applicationsResponse?.data || []).map(app => ({
     ...app,
-    candidate: candidateMap.get(app.candidateId),
+    candidate: app.candidate || candidateMap.get(app.candidateId),
+    client: app.client || clientMap.get(app.clientId),
   }));
 
   // Filter applications by search query
@@ -77,17 +80,28 @@ export default function ApplicationsPage() {
     );
   });
 
+  const statusApplications = (applicationStatusResponse?.data || []).map(app => ({
+    ...app,
+    candidate: app.candidate || candidateMap.get(app.candidateId),
+    client: app.client || clientMap.get(app.clientId),
+  }));
+
+  const recentFinalStatuses = [...statusApplications]
+    .filter((app) => app.status === 'accepted' || app.status === 'rejected')
+    .sort(
+      (a, b) =>
+        new Date(b.lastActivityAt || b.submittedAt).getTime() -
+        new Date(a.lastActivityAt || a.submittedAt).getTime()
+    )
+    .slice(0, 10);
+
   const handleCreate = async (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string }) => {
     await createMutation.mutateAsync({
       ...data,
       clientId: currentClientId || data.clientId,
     });
+    await refetch();
     toast.success('Application created successfully');
-  };
-
-  const handleUpdate = async (id: string, data: { jobTitle?: string }) => {
-    await updateMutation.mutateAsync({ id, data });
-    toast.success('Application updated successfully');
   };
 
   const handleDelete = (id: string) => {
@@ -114,15 +128,19 @@ export default function ApplicationsPage() {
     });
   };
 
-  const handleEdit = (application: Application) => {
-    setEditingApplication(application);
-    setFormModalOpen(true);
-  };
+  const searchComponent = (
+    <EnhancedSearch
+      value={searchQuery}
+      onChange={setSearchQuery}
+      placeholder="Search applications by candidate or job title..."
+      className="w-80"
+    />
+  );
 
   // Loading state
   if (isLoadingApplications) {
     return (
-      <DashboardLayout title="Applications" onSearch={setSearchQuery}>
+      <DashboardLayout title="Applications" searchComponent={searchComponent}>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -136,7 +154,7 @@ export default function ApplicationsPage() {
   // Error state
   if (applicationsError) {
     return (
-      <DashboardLayout title="Applications" onSearch={setSearchQuery}>
+      <DashboardLayout title="Applications" searchComponent={searchComponent}>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="flex flex-col items-center gap-4 text-center">
             <AlertCircle className="w-8 h-8 text-destructive" />
@@ -154,7 +172,7 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <DashboardLayout title="Applications" onSearch={setSearchQuery}>
+    <DashboardLayout title="Applications" searchComponent={searchComponent}>
       {/* Filters Bar */}
       <ApplicationFiltersBar filters={filters} onFiltersChange={setFilters} />
 
@@ -164,31 +182,77 @@ export default function ApplicationsPage() {
           <h2 className="text-lg font-semibold">
             {filteredApplications.length} Applications
           </h2>
-          <Button onClick={() => { setEditingApplication(null); setFormModalOpen(true); }}>
+          <Button onClick={() => { setFormModalOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" />
             Create Application
           </Button>
         </div>
 
-        <div className="grid gap-4">
-          {filteredApplications.map((app) => (
-            <ApplicationCard
-              key={app.id}
-              application={app}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onRestore={handleRestore}
-              onFlag={handleFlag}
-              onUnflag={handleUnflag}
-            />
-          ))}
-        </div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_360px]">
+          <section className="space-y-4">
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="text-base font-semibold">Application</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                All applications appear in this column.
+              </p>
+            </div>
 
-        {filteredApplications.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No applications found
-          </div>
-        )}
+            <div className="grid gap-4">
+              {filteredApplications.map((app) => (
+                <ApplicationCard
+                  key={app.id}
+                  application={app}
+                  onDelete={handleDelete}
+                  onRestore={handleRestore}
+                  onFlag={handleFlag}
+                  onUnflag={handleUnflag}
+                />
+              ))}
+            </div>
+
+            {filteredApplications.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                No applications found
+              </div>
+            )}
+          </section>
+
+          <aside className="space-y-4">
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="text-base font-semibold">Application Status</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Last 10 final client decisions.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {recentFinalStatuses.map((app) => (
+                <div key={app.id} className="rounded-lg border bg-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {app.candidate?.name || 'Unknown Candidate'}
+                      </p>
+                      <p className="truncate text-sm text-muted-foreground">
+                        {app.client?.name || 'Unknown Client'} — {app.jobTitle}
+                      </p>
+                    </div>
+                    <StatusBadge status={app.status} type="application" />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {new Date(app.lastActivityAt || app.submittedAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+
+              {recentFinalStatuses.length === 0 && (
+                <div className="rounded-lg border border-dashed bg-card p-6 text-sm text-muted-foreground">
+                  No final application statuses yet.
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
 
         {/* Pagination */}
         {applicationsResponse && applicationsResponse.totalPages > 1 && (
@@ -221,12 +285,10 @@ export default function ApplicationsPage() {
         open={formModalOpen}
         onOpenChange={setFormModalOpen}
         onSubmit={handleCreate}
-        onUpdate={handleUpdate}
-        application={editingApplication}
         candidates={candidatesResponse?.data || []}
         clients={scopedClients}
         currentClientId={currentClientId}
-        isLoading={createMutation.isPending || updateMutation.isPending}
+        isLoading={createMutation.isPending}
       />
     </DashboardLayout>
   );
@@ -234,14 +296,13 @@ export default function ApplicationsPage() {
 
 interface ApplicationCardProps {
   application: Application;
-  onEdit: (app: Application) => void;
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onFlag: (id: string, reason?: string) => void;
   onUnflag: (id: string) => void;
 }
 
-function ApplicationCard({ application, onEdit, onDelete, onRestore, onFlag, onUnflag }: ApplicationCardProps) {
+function ApplicationCard({ application, onDelete, onRestore, onFlag, onUnflag }: ApplicationCardProps) {
   return (
     <div className={`panel hover:border-primary/30 transition-colors ${application.isDeleted ? 'opacity-60' : ''}`}>
       <div className="p-4 flex items-start justify-between">
@@ -289,7 +350,6 @@ function ApplicationCard({ application, onEdit, onDelete, onRestore, onFlag, onU
           <StatusBadge status={application.status} type="application" />
           <ApplicationActionsMenu
             application={application}
-            onEdit={onEdit}
             onDelete={onDelete}
             onRestore={onRestore}
             onFlag={onFlag}

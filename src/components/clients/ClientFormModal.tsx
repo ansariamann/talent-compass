@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,6 +6,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -86,6 +96,8 @@ export function ClientFormModal({
   onSubmit,
 }: ClientFormModalProps) {
   const isEditing = Boolean(client);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingValues, setPendingValues] = useState<FormValues | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -96,7 +108,7 @@ export function ClientFormModal({
     form.reset(getDefaultValues(client));
   }, [client, form, open]);
 
-  const handleSubmit = (values: FormValues) => {
+  const submitValues = (values: FormValues) => {
     onSubmit({
       name: values.name.trim(),
       industry: values.industry,
@@ -108,6 +120,17 @@ export function ClientFormModal({
       isActive: client?.isActive ?? true,
     });
     onOpenChange(false);
+    setConfirmOpen(false);
+    setPendingValues(null);
+  };
+
+  const handleSubmit = (values: FormValues) => {
+    if (isEditing) {
+      submitValues(values);
+      return;
+    }
+    setPendingValues(values);
+    setConfirmOpen(true);
   };
 
   return (
@@ -253,6 +276,30 @@ export function ClientFormModal({
           </form>
         </Form>
       </DialogContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Client And Send Credentials?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The system will create the client, generate a default login email and temporary password,
+              and send those credentials to <strong>{pendingValues?.contactEmail}</strong>.
+              The email will also include password reset instructions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+            <div><strong>Client:</strong> {pendingValues?.name}</div>
+            <div><strong>Contact:</strong> {pendingValues?.contactName || "Not provided"}</div>
+            <div><strong>Email:</strong> {pendingValues?.contactEmail}</div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingValues(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingValues && submitValues(pendingValues)}>
+              Confirm Create
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

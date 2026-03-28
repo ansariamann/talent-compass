@@ -44,6 +44,7 @@ export interface User {
 
 export interface Candidate {
   id: string;
+  clientId: string;
   name: string;
   email: string;
   phone?: string;
@@ -54,8 +55,15 @@ export interface Candidate {
   dateOfBirth?: string;
   previousEmployment?: Array<Record<string, unknown>>;
   keySkill?: string;
+  resumeFilePath?: string;
+  assignedUserId?: string;
   skills: string[];
   experience: number; // years
+  totalExperienceYears?: number;
+  noticePeriodDays?: number;
+  source?: string;
+  linkedinUrl?: string;
+  client?: string;
   currentStatus: CandidateStatus;
   resumeUrl?: string;
   resumeParsed?: ResumeData;
@@ -98,9 +106,9 @@ export interface WorkExperience {
 export interface Client {
   id: string;
   name: string;
-  industry: string;
-  contactEmail: string;
-  contactName: string;
+  industry?: string;
+  contactEmail?: string;
+  contactName?: string;
   contactPhone?: string;
   address?: string;
   website?: string;
@@ -169,6 +177,76 @@ export interface InterviewFeedback {
   comments: string;
 }
 
+export type TimelineEventType = "state_change" | "interview_round" | "feedback";
+
+export interface WorkflowInterviewDetails {
+  roundNumber: number;
+  mode: "in_person" | "video" | "phone";
+  interviewerName?: string;
+  scheduledDate?: string;
+}
+
+export interface WorkflowFeedbackDetails {
+  roundNumber: number;
+  rating: 1 | 2 | 3 | 4 | 5;
+  recommendation: "strong_yes" | "yes" | "neutral" | "no" | "strong_no";
+}
+
+export interface ApplicationTimeline {
+  id: string;
+  candidateId: string;
+  eventType: TimelineEventType;
+  state?: CandidateStatus;
+  timestamp: string;
+  actor: "client" | "system" | "hr";
+  note?: string;
+  interviewDetails?: WorkflowInterviewDetails;
+  feedbackDetails?: WorkflowFeedbackDetails;
+}
+
+export interface ScheduleInterviewPayload {
+  candidateId: string;
+  scheduledDate: string;
+  mode: "in_person" | "video" | "phone";
+  roundNumber: number;
+  interviewerName?: string;
+  notes?: string;
+}
+
+export interface InterviewFeedbackPayload {
+  candidateId: string;
+  roundNumber: number;
+  rating: 1 | 2 | 3 | 4 | 5;
+  recommendation: "strong_yes" | "yes" | "neutral" | "no" | "strong_no";
+  feedback: string;
+}
+
+export type RejectReason =
+  | "skill_mismatch"
+  | "experience_insufficient"
+  | "culture_fit"
+  | "salary_expectation"
+  | "other";
+
+export interface RejectPayload {
+  candidateId: string;
+  reason: RejectReason;
+  feedback: string;
+}
+
+export type LeftReason =
+  | "resigned"
+  | "terminated"
+  | "contract_ended"
+  | "other";
+
+export interface LeftCompanyPayload {
+  candidateId: string;
+  reason: LeftReason;
+  feedback: string;
+  lastWorkingDate?: string;
+}
+
 export interface Job {
   id: string;
   clientId: string;
@@ -179,6 +257,7 @@ export interface Job {
   experienceRequired?: number;
   salaryLpa?: number;
   location?: string;
+  submittedByClient?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -222,6 +301,17 @@ export interface DirectInterviewRecord {
   rating?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JobInput {
+  clientId: string;
+  title: string;
+  companyName: string;
+  postingDate?: string;
+  requirements?: string;
+  experienceRequired?: number;
+  salaryLpa?: number;
+  location?: string;
 }
 
 export interface ApplicationFilters {

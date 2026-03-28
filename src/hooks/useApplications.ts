@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { applicationsApi } from '@/lib/api';
 import type { Application, ApplicationFilters, PaginatedResponse } from '@/types/ats';
 
@@ -23,7 +23,10 @@ export function useApplications(
     return useQuery<PaginatedResponse<Application>, Error>({
         queryKey: applicationKeys.list(filters, page, pageSize),
         queryFn: () => applicationsApi.list(filters, page, pageSize),
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 5,
+        refetchOnWindowFocus: true,
+        refetchInterval: 1000 * 15,
+        placeholderData: keepPreviousData,
     });
 }
 
@@ -50,7 +53,7 @@ export function useApplicationStatistics() {
     return useQuery({
         queryKey: applicationKeys.statistics(),
         queryFn: () => applicationsApi.getStatistics(),
-        staleTime: 1000 * 60 * 2, // 2 minutes
+        staleTime: 1000 * 60 * 2,
     });
 }
 
@@ -123,11 +126,7 @@ export function useFlagApplication() {
     return useMutation({
         mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
             applicationsApi.flag(id, reason),
-        onSuccess: (updatedApplication) => {
-            queryClient.setQueryData(
-                applicationKeys.detail(updatedApplication.id),
-                updatedApplication
-            );
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
         },
     });
@@ -139,11 +138,7 @@ export function useUnflagApplication() {
 
     return useMutation({
         mutationFn: (id: string) => applicationsApi.unflag(id),
-        onSuccess: (updatedApplication) => {
-            queryClient.setQueryData(
-                applicationKeys.detail(updatedApplication.id),
-                updatedApplication
-            );
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
         },
     });
@@ -157,12 +152,10 @@ export function useUpdateApplicationStatus() {
         mutationFn: ({ id, status, note }: { id: string; status: string; note?: string }) =>
             applicationsApi.updateStatus(id, status, note),
         onSuccess: (updatedApplication) => {
-            // Update the specific application in cache
             queryClient.setQueryData(
                 applicationKeys.detail(updatedApplication.id),
                 updatedApplication
             );
-            // Invalidate list queries to refetch
             queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
             queryClient.invalidateQueries({ queryKey: applicationKeys.statistics() });
         },
@@ -177,7 +170,6 @@ export function useAddApplicationNote() {
         mutationFn: ({ id, content, isInternal }: { id: string; content: string; isInternal?: boolean }) =>
             applicationsApi.addNote(id, content, isInternal),
         onSuccess: (_, { id }) => {
-            // Invalidate the specific application to refetch with new note
             queryClient.invalidateQueries({ queryKey: applicationKeys.detail(id) });
         },
     });

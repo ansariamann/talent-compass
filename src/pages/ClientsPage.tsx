@@ -14,7 +14,7 @@ import {
   useToggleClientActive 
 } from '@/hooks/useClients';
 import { mockApplications } from '@/lib/mock-data';
-import { Building2, Mail, User, Phone, Plus, Search, Link, CheckCircle2, Clock } from 'lucide-react';
+import { Building2, Mail, User, Phone, Plus, Search, Link, CheckCircle2, Clock, MapPin, Globe } from 'lucide-react';
 import type { Client } from '@/types/ats';
 
 export default function ClientsPage() {
@@ -31,9 +31,11 @@ export default function ClientsPage() {
 
   const filteredClients = clients.filter(client => 
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.contactName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.contactEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    (client.industry || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.contactName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.contactEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.address || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.website || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddClient = () => {
@@ -156,21 +158,43 @@ export default function ClientsPage() {
                     <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
                       {client.name}
                     </h3>
-                    <Badge variant="secondary" className="mb-4">{client.industry}</Badge>
+                    {client.industry && (
+                      <Badge variant="secondary" className="mb-4">{client.industry}</Badge>
+                    )}
 
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{client.contactName}</span>
+                        <span className="truncate">{client.contactName || 'No contact name'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{client.contactEmail}</span>
+                        <span className="truncate">{client.contactEmail || 'No contact email'}</span>
                       </div>
                       {client.contactPhone && (
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 flex-shrink-0" />
                           <span className="truncate">{client.contactPhone}</span>
+                        </div>
+                      )}
+                      {client.address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span className="line-clamp-2">{client.address}</span>
+                        </div>
+                      )}
+                      {client.website && (
+                        <div className="flex items-center gap-2">
+                          <Globe className="w-4 h-4 flex-shrink-0" />
+                          <a
+                            href={client.website}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="truncate text-primary hover:underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {client.website}
+                          </a>
                         </div>
                       )}
                     </div>

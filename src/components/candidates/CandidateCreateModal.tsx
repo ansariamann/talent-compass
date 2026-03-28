@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateCandidate } from "@/hooks/useCandidates";
+import { useCreateCandidate, useUpdateCandidate } from "@/hooks/useCandidates";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Candidate } from "@/types/ats";
 
 const candidateStatuses = [
   { value: "new", label: "Active" },
@@ -66,9 +67,15 @@ const formSchema = z.object({
   keySkill: z.string().trim().optional().or(z.literal("")),
   skills: z.string().trim().optional().or(z.literal("")),
   experience: z.coerce.number().min(0, "Experience must be 0 or more").max(60, "Experience is too high"),
+  totalExperienceYears: optionalNonNegativeNumber,
+  noticePeriodDays: optionalNonNegativeNumber,
   ctcCurrent: optionalNonNegativeNumber,
   ctcExpected: optionalNonNegativeNumber,
+  source: z.string().trim().max(100, "Source is too long").optional().or(z.literal("")),
+  linkedinUrl: z.string().trim().url("Enter a valid LinkedIn URL").optional().or(z.literal("")),
   status: z.enum(statusValues),
+  resumeUrl: z.string().trim().optional().or(z.literal("")),
+  resumeFilePath: z.string().trim().optional().or(z.literal("")),
   remark: z.string().trim().optional().or(z.literal("")),
   previousEmployment: z.string().trim().optional().or(z.literal("")),
 }).superRefine((data, ctx) => {
@@ -110,13 +117,19 @@ type FormValues = z.infer<typeof formSchema>;
 interface CandidateCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  candidate?: Candidate | null;
+  onSuccess?: (candidate: Candidate) => void;
 }
 
 export function CandidateCreateModal({
   open,
   onOpenChange,
+  candidate,
+  onSuccess,
 }: CandidateCreateModalProps) {
   const createCandidate = useCreateCandidate();
+  const updateCandidate = useUpdateCandidate();
+  const isEditMode = Boolean(candidate);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -132,9 +145,15 @@ export function CandidateCreateModal({
       keySkill: "",
       skills: "",
       experience: 0,
+      totalExperienceYears: undefined,
+      noticePeriodDays: undefined,
       ctcCurrent: undefined,
       ctcExpected: undefined,
+      source: "",
+      linkedinUrl: "",
       status: "new",
+      resumeUrl: "",
+      resumeFilePath: "",
       remark: "",
       previousEmployment: "",
     },
@@ -157,36 +176,77 @@ export function CandidateCreateModal({
     []
   );
 
-  const handleSubmit = async (values: FormValues) => {
-    try {
-      await createCandidate.mutateAsync({
-        name: values.name.trim(),
-        email: values.email?.trim() || undefined,
-        phone: values.phone?.trim() || undefined,
-        company: values.company?.trim() || undefined,
-        location: values.location?.trim() || undefined,
-        presentAddress: values.presentAddress?.trim() || undefined,
-        permanentAddress: values.permanentAddress?.trim() || undefined,
-        dateOfBirth: values.dateOfBirth || undefined,
-        keySkill: values.keySkill?.trim() || undefined,
-        skills: values.skills
-          ? values.skills.split(",").map((skill) => skill.trim()).filter(Boolean)
-          : [],
-        experience: values.experience,
-        ctcCurrent: values.ctcCurrent,
-        ctcExpected: values.ctcExpected,
-        currentStatus: values.status,
-        remark: values.remark?.trim() || undefined,
-        previousEmployment: values.previousEmployment
-          ? JSON.parse(values.previousEmployment)
-          : undefined,
-      });
+  useEffect(() => {
+    form.reset({
+      name: candidate?.name || "",
+      email: candidate?.email || "",
+      phone: candidate?.phone || "",
+      company: candidate?.company || "",
+      location: candidate?.location || "",
+      presentAddress: candidate?.presentAddress || "",
+      permanentAddress: candidate?.permanentAddress || "",
+      dateOfBirth: candidate?.dateOfBirth || "",
+      keySkill: candidate?.keySkill || "",
+      skills: candidate?.skills.join(", ") || "",
+      experience: candidate?.experience ?? 0,
+      totalExperienceYears: candidate?.totalExperienceYears,
+      noticePeriodDays: candidate?.noticePeriodDays,
+      ctcCurrent: candidate?.ctcCurrent,
+      ctcExpected: candidate?.ctcExpected,
+      source: candidate?.source || "",
+      linkedinUrl: candidate?.linkedinUrl || "",
+      status: candidate?.currentStatus || "new",
+      resumeUrl: candidate?.resumeUrl || "",
+      resumeFilePath: candidate?.resumeFilePath || "",
+      remark: candidate?.remark || "",
+      previousEmployment: candidate?.previousEmployment
+        ? JSON.stringify(candidate.previousEmployment, null, 2)
+        : "",
+    });
+  }, [candidate, open, form]);
 
-      toast.success("Candidate added to the database");
+  const handleSubmit = async (values: FormValues) => {
+    const payload: Partial<Candidate> = {
+      name: values.name.trim(),
+      email: values.email?.trim() || undefined,
+      phone: values.phone?.trim() || undefined,
+      company: values.company?.trim() || undefined,
+      location: values.location?.trim() || undefined,
+      presentAddress: values.presentAddress?.trim() || undefined,
+      permanentAddress: values.permanentAddress?.trim() || undefined,
+      dateOfBirth: values.dateOfBirth || undefined,
+      keySkill: values.keySkill?.trim() || undefined,
+      skills: values.skills
+        ? values.skills.split(",").map((skill) => skill.trim()).filter(Boolean)
+        : [],
+      experience: values.experience,
+      totalExperienceYears: values.totalExperienceYears,
+      noticePeriodDays:
+        values.noticePeriodDays === undefined ? undefined : Number(values.noticePeriodDays),
+      ctcCurrent: values.ctcCurrent,
+      ctcExpected: values.ctcExpected,
+      source: values.source?.trim() || undefined,
+      linkedinUrl: values.linkedinUrl?.trim() || undefined,
+      currentStatus: values.status,
+      resumeUrl: values.resumeUrl?.trim() || undefined,
+      resumeFilePath: values.resumeFilePath?.trim() || undefined,
+      remark: values.remark?.trim() || undefined,
+      previousEmployment: values.previousEmployment
+        ? JSON.parse(values.previousEmployment)
+        : undefined,
+    };
+
+    try {
+      const savedCandidate = candidate
+        ? await updateCandidate.mutateAsync({ id: candidate.id, data: payload })
+        : await createCandidate.mutateAsync(payload);
+
+      toast.success(candidate ? "Candidate updated" : "Candidate added to the database");
       form.reset();
+      onSuccess?.(savedCandidate);
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create candidate");
+      toast.error(error instanceof Error ? error.message : `Failed to ${candidate ? "update" : "create"} candidate`);
     }
   };
 
@@ -202,9 +262,11 @@ export function CandidateCreateModal({
     >
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Candidate</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Candidate" : "Add Candidate"}</DialogTitle>
           <DialogDescription>
-            Create a candidate directly in the master database without resume upload.
+            {isEditMode
+              ? "Update candidate details directly in the master database."
+              : "Create a candidate directly in the master database without resume upload."}
           </DialogDescription>
         </DialogHeader>
 
@@ -317,6 +379,54 @@ export function CandidateCreateModal({
 
               <FormField
                 control={form.control}
+                name="totalExperienceYears"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Experience (Years)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value === "" ? undefined : event.target.value
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="noticePeriodDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notice Period (Days)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(
+                            event.target.value === "" ? undefined : event.target.value
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
@@ -408,6 +518,34 @@ export function CandidateCreateModal({
 
               <FormField
                 control={form.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Source</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="MANUAL, REFERRAL, LINKEDIN..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="linkedinUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>LinkedIn URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://www.linkedin.com/in/..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="skills"
                 render={({ field }) => (
                   <FormItem>
@@ -471,6 +609,34 @@ export function CandidateCreateModal({
 
               <FormField
                 control={form.control}
+                name="resumeUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Resume URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="/uploads/candidate-resume.pdf" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="resumeFilePath"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Resume File Path</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="/uploads/candidate-resume.pdf" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="previousEmployment"
                 render={({ field }) => (
                   <FormItem>
@@ -496,13 +662,13 @@ export function CandidateCreateModal({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createCandidate.isPending}>
-                {createCandidate.isPending ? (
+              <Button type="submit" disabled={createCandidate.isPending || updateCandidate.isPending}>
+                {createCandidate.isPending || updateCandidate.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Plus className="mr-2 h-4 w-4" />
                 )}
-                Add Candidate
+                {isEditMode ? "Save Changes" : "Add Candidate"}
               </Button>
             </DialogFooter>
           </form>
