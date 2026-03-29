@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -77,7 +77,9 @@ export function SubmitApplicationModal({
   const createApplication = useCreateApplication();
   const scopedClients = currentClientId ? clients.filter((client) => client.id === currentClientId) : clients;
   const jobs = jobsResponse?.data || [];
-  const scopedJobs = jobs.filter((job) => !currentClientId || job.clientId === currentClientId);
+  const scopedJobs = jobs.filter(
+    (job) => job.vacant !== false && (!currentClientId || job.clientId === currentClientId)
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -95,7 +97,19 @@ export function SubmitApplicationModal({
   }, [currentClientId, form]);
 
   const selectedClientId = form.watch('clientId');
+  const selectedJobId = form.watch('jobId');
   const selectedClient = scopedClients.find(c => c.id === selectedClientId);
+  const availableJobs = useMemo(
+    () => scopedJobs.filter((job) => job.clientId === selectedClientId),
+    [scopedJobs, selectedClientId]
+  );
+
+  useEffect(() => {
+    if (!selectedJobId || availableJobs.some((job) => job.id === selectedJobId)) {
+      return;
+    }
+    form.setValue('jobId', '');
+  }, [availableJobs, form, selectedJobId]);
 
   const handleSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -299,16 +313,20 @@ export function SubmitApplicationModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {scopedJobs
-                        .filter(j => j.clientId === selectedClientId)
-                        .map(job => (
+                      {availableJobs.length > 0 ? (
+                        availableJobs.map(job => (
                           <SelectItem key={job.id} value={job.id}>
                             <div className="flex items-center gap-2">
                               {job.title}
                               <span className="text-xs text-muted-foreground">— {job.location}</span>
                             </div>
                           </SelectItem>
-                        ))}
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-sm text-muted-foreground">
+                          No vacant jobs available for this client.
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

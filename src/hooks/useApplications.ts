@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { jobKeys } from '@/hooks/useJobs';
 import { applicationsApi } from '@/lib/api';
 import type { Application, ApplicationFilters, PaginatedResponse } from '@/types/ats';
 
@@ -67,6 +68,7 @@ export function useCreateApplication() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
             queryClient.invalidateQueries({ queryKey: applicationKeys.statistics() });
+            queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
         },
     });
 }
@@ -114,6 +116,7 @@ export function useRestoreApplication() {
                 updatedApplication
             );
             queryClient.invalidateQueries({ queryKey: applicationKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
             queryClient.invalidateQueries({ queryKey: applicationKeys.statistics() });
         },
     });

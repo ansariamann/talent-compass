@@ -73,6 +73,9 @@ export default function JobDetailPage() {
                 <Building2 className="h-4 w-4" />
                 {job.companyName}
               </span>
+              <Badge variant={job.vacant !== false ? 'outline' : 'secondary'} className="capitalize">
+                {job.vacant !== false ? 'Vacant' : 'Filled'}
+              </Badge>
               <span className="inline-flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
                 {job.location || 'Remote/Any'}
@@ -89,7 +92,9 @@ export default function JobDetailPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => setSubmitOpen(true)}>Submit Candidates</Button>
+            <Button onClick={() => setSubmitOpen(true)} disabled={job.vacant === false}>
+              Submit Candidates
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="gap-2" disabled={deleteJob.isPending}>
@@ -211,4 +216,3 @@ export default function JobDetailPage() {
     </DashboardLayout>
   );
 }
-

@@ -24,12 +24,13 @@ import {
 } from "@/components/ui/form";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Application, Candidate, Client } from "@/types/ats";
+import { useJobs } from "@/hooks/useJobs";
+import type { Application, Candidate, Client, Job } from "@/types/ats";
 
 const createSchema = z.object({
   candidateId: z.string().min(1, "Please select a candidate"),
   clientId: z.string().min(1, "Please select a client"),
-  jobTitle: z.string().trim().min(1, "Please enter a job title"),
+  jobId: z.string().min(1, "Please select a vacant job"),
 });
 
 const editSchema = z.object({
@@ -65,13 +66,14 @@ export function ApplicationFormModal({
   const isEditing = Boolean(application);
   const [candidatePickerOpen, setCandidatePickerOpen] = useState(false);
   const [candidateQuery, setCandidateQuery] = useState("");
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs({}, 1, 500);
 
   const createForm = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
       candidateId: "",
       clientId: "",
-      jobTitle: "",
+      jobId: "",
     },
   });
 
@@ -91,7 +93,7 @@ export function ApplicationFormModal({
       createForm.reset({
         candidateId: "",
         clientId: currentClientId || clients[0]?.id || "",
-        jobTitle: "",
+        jobId: "",
       });
       setCandidateQuery("");
     }
@@ -99,10 +101,21 @@ export function ApplicationFormModal({
 
   const selectedClientId = createForm.watch("clientId");
   const selectedCandidateId = createForm.watch("candidateId");
+  const selectedJobId = createForm.watch("jobId");
 
   const availableCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.currentStatus !== "selected"),
     [candidates]
+  );
+
+  const availableJobs = useMemo(() => {
+    const jobs = jobsResponse?.data || [];
+    return jobs.filter((job) => job.vacant !== false && (!selectedClientId || job.clientId === selectedClientId));
+  }, [jobsResponse, selectedClientId]);
+
+  const selectedJob = useMemo(
+    () => availableJobs.find((job) => job.id === selectedJobId),
+    [availableJobs, selectedJobId]
   );
 
   const filteredCandidates = useMemo(() => {
@@ -116,6 +129,14 @@ export function ApplicationFormModal({
     );
   }, [availableCandidates, candidateQuery]);
 
+  useEffect(() => {
+    const nextJob = availableJobs.find((job) => job.id === selectedJobId);
+    if (!selectedJobId || nextJob) {
+      return;
+    }
+    createForm.setValue("jobId", "");
+  }, [availableJobs, createForm, selectedJobId]);
+
   const selectedCandidate = useMemo(
     () => availableCandidates.find((candidate) => candidate.id === selectedCandidateId),
     [availableCandidates, selectedCandidateId]
@@ -125,7 +146,8 @@ export function ApplicationFormModal({
     await onSubmit({
       candidateId: values.candidateId,
       clientId: values.clientId,
-      jobTitle: values.jobTitle.trim(),
+      jobId: values.jobId,
+      jobTitle: selectedJob?.title,
     });
     onOpenChange(false);
   };
@@ -312,16 +334,47 @@ export function ApplicationFormModal({
 
               <FormField
                 control={createForm.control}
-                name="jobTitle"
+                name="jobId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job Title</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="e.g., Senior Accountant"
-                      />
-                    </FormControl>
+                    <FormLabel>Vacant Job</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!selectedClientId || jobsLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              !selectedClientId
+                                ? "Select a client first"
+                                : jobsLoading
+                                ? "Loading vacant jobs..."
+                                : "Select a vacant job"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableJobs.length > 0 ? (
+                          availableJobs.map((job: Job) => (
+                            <SelectItem key={job.id} value={job.id}>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="truncate">{job.title}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {job.companyName}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-3 text-sm text-muted-foreground">
+                            No vacant jobs available for this client.
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

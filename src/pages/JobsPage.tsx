@@ -48,9 +48,13 @@ export default function JobsPage() {
       return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
     });
   }, [jobsResponse]);
+  const visibleJobs = useMemo(
+    () => jobs.filter((job) => job.vacant !== false),
+    [jobs]
+  );
   const recentClientJobs = useMemo(
-    () => jobs.filter((job) => job.submittedByClient && !seenClientJobIds.includes(job.id)),
-    [jobs, seenClientJobIds]
+    () => visibleJobs.filter((job) => job.submittedByClient && !seenClientJobIds.includes(job.id)),
+    [seenClientJobIds, visibleJobs]
   );
 
   useEffect(() => {
@@ -181,7 +185,7 @@ export default function JobsPage() {
             </div>
           )}
 
-          {jobs.length === 0 ? (
+          {visibleJobs.length === 0 ? (
             <div className="mt-10 rounded-lg border border-dashed border-border bg-muted/20 p-10 text-center text-muted-foreground">
               {clients.length === 0
                 ? 'No clients found. Create a client first, then add a job for that client.'
@@ -189,7 +193,7 @@ export default function JobsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {jobs.map((job) => (
+              {visibleJobs.map((job) => (
                 <JobCard key={job.id} job={job} onClick={() => navigate(`/jobs/${job.id}`)} />
               ))}
             </div>
@@ -199,7 +203,7 @@ export default function JobsPage() {
         {jobsResponse && jobsResponse.totalPages > 1 && (
           <div className="shrink-0 p-4 border-t border-border flex items-center justify-between">
             <span className="text-sm text-muted-foreground">
-              Showing {jobs.length} of {jobsResponse.total} jobs
+              Showing {visibleJobs.length} of {jobsResponse.total} jobs
             </span>
             <div className="flex gap-2 items-center">
               <Button

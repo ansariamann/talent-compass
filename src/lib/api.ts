@@ -306,6 +306,7 @@ interface BackendJob {
   experience_required?: number | null;
   salary_lpa?: number | null;
   location?: string | null;
+  vacant?: boolean;
   submitted_by_client?: boolean;
   created_at: string;
   updated_at: string;
@@ -381,6 +382,7 @@ function transformJob(backend: BackendJob): Job {
     experienceRequired: backend.experience_required ?? undefined,
     salaryLpa,
     location: backend.location || undefined,
+    vacant: backend.vacant ?? true,
     submittedByClient: backend.submitted_by_client ?? false,
     createdAt: normalizeApiDate(backend.created_at) || backend.created_at,
     updatedAt: normalizeApiDate(backend.updated_at) || backend.updated_at,
@@ -925,6 +927,19 @@ export const emailApi = {
     });
   },
 
+  pollInbox: async (): Promise<{
+    success: boolean;
+    messages_seen: number;
+    messages_ingested: number;
+    attachments_processed: number;
+    duplicate_messages: number;
+    failures: number;
+  }> => {
+    return fetchWithAuth('/email/poll-imap', {
+      method: 'POST',
+    });
+  },
+
   getJobs: async (status?: string, page = 1, pageSize = 25): Promise<PaginatedResponse<ResumeJob>> => {
     const params = new URLSearchParams({
       skip: String((page - 1) * pageSize),
@@ -946,11 +961,17 @@ export const emailApi = {
     });
   },
 
-  retryJob: async (id: string): Promise<ResumeJob> => {
-    return fetchWithAuth<ResumeJob>(`/email/tasks/${id}/retry`, {
+  retryJob: async (id: string): Promise<{ success: boolean; message: string; job_id: string }> => {
+    return fetchWithAuth<{ success: boolean; message: string; job_id: string }>(`/email/tasks/${id}/retry`, {
       method: 'POST',
     });
-  }
+  },
+
+  deleteJob: async (id: string): Promise<{ success: boolean; message: string; job_id: string }> => {
+    return fetchWithAuth<{ success: boolean; message: string; job_id: string }>(`/email/tasks/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Clients API

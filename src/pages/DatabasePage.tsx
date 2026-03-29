@@ -123,11 +123,12 @@ export default function DatabasePage() {
       if (jobsRes.status === 'fulfilled') {
         const jobs = jobsRes.value.data;
         data.jobs = {
-          columns: ['ID', 'Title', 'Company / Client', 'Experience', 'Salary (LPA)', 'Location', 'Created At'],
+          columns: ['ID', 'Title', 'Company / Client', 'Vacant', 'Experience', 'Salary (LPA)', 'Location', 'Created At'],
           rows: jobs.map(j => [
             j.id,
             j.title,
             j.companyName || j.clientId || '-',
+            j.vacant !== false ? 'Yes' : 'No',
             j.experienceRequired !== undefined ? `${j.experienceRequired} yrs` : '-',
             j.salaryLpa !== undefined ? j.salaryLpa.toString() : '-',
             j.location || '-',

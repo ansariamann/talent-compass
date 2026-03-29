@@ -98,6 +98,10 @@ export function SubmitCandidateToJobModal({
 
   const handleSubmit = async (values: FormValues) => {
     if (!job) return;
+    if (job.vacant === false) {
+      toast.error('This job is already filled.');
+      return;
+    }
     if (selectedCandidateIds.size === 0) {
       toast.error('Please select at least one candidate.');
       return;
@@ -228,6 +232,12 @@ export function SubmitCandidateToJobModal({
           </DialogDescription>
         </DialogHeader>
 
+        {job.vacant === false && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            This job is already filled and cannot accept new candidate submissions.
+          </div>
+        )}
+
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-primary" />
@@ -321,7 +331,11 @@ export function SubmitCandidateToJobModal({
               <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting || selectedCandidateIds.size === 0} className="gap-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting || selectedCandidateIds.size === 0 || job.vacant === false}
+                className="gap-2"
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />

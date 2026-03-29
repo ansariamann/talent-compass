@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { AlertCircle, Check, Loader2, RefreshCw, X } from "lucide-react";
+import { AlertCircle, Check, Loader2, RefreshCw, RotateCcw, Trash2, X } from "lucide-react";
 import { emailApi } from "@/lib/api";
 import type { ResumeJob } from "@/types/ats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Table,
   TableBody,
@@ -19,10 +21,14 @@ interface ResumeJobsListProps {
 }
 
 export function ResumeJobsList({ refreshKey = 0 }: ResumeJobsListProps) {
+  const { user } = useAuth();
+  const isHrAdmin = user?.role?.toLowerCase() === "hr_admin";
   const [jobs, setJobs] = useState<ResumeJob[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
 
   const fetchJobs = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -55,6 +61,42 @@ export function ResumeJobsList({ refreshKey = 0 }: ResumeJobsListProps) {
     }, 5000);
     return () => clearInterval(interval);
   }, [jobs]);
+
+  const handleDeleteJob = async (job: ResumeJob) => {
+    if (!isHrAdmin) return;
+
+    const confirmed = window.confirm(
+      `Delete processing request for "${getCandidateName(job)}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingJobId(job.id);
+      await emailApi.deleteJob(job.id);
+      setJobs((current) => current.filter((item) => item.id !== job.id));
+      toast.success("Processing request deleted");
+      setLastUpdated(new Date());
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete processing request";
+      toast.error(message);
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
+
+  const handleRetryJob = async (job: ResumeJob) => {
+    try {
+      setRetryingJobId(job.id);
+      await emailApi.retryJob(job.id);
+      toast.success("Retry queued");
+      await fetchJobs(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to retry upload";
+      toast.error(message);
+    } finally {
+      setRetryingJobId(null);
+    }
+  };
 
   return (
     <Card>
@@ -99,6 +141,7 @@ export function ResumeJobsList({ refreshKey = 0 }: ResumeJobsListProps) {
                 <TableHead>Candidate Name</TableHead>
                 <TableHead>Upload Status</TableHead>
                 <TableHead>Created At</TableHead>
+                {isHrAdmin ? <TableHead className="text-right">Actions</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -109,6 +152,39 @@ export function ResumeJobsList({ refreshKey = 0 }: ResumeJobsListProps) {
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(job.created_at).toLocaleString()}
                   </TableCell>
+                  {isHrAdmin ? (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {job.status === "FAILED" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetryJob(job)}
+                            disabled={loading || retryingJobId === job.id}
+                          >
+                            {retryingJobId === job.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteJob(job)}
+                          disabled={loading || deletingJobId === job.id}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {deletingJobId === job.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>
