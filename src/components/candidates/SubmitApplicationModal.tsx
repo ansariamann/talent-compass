@@ -70,10 +70,11 @@ export function SubmitApplicationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [results, setResults] = useState<SubmissionResult[] | null>(null);
   const { user } = useAuth();
-  const currentClientId = user?.client_id;
+  const isClientScopedUser = user?.role === 'client_admin' || user?.role === 'client_user';
+  const currentClientId = isClientScopedUser ? user?.client_id : undefined;
 
   const { data: clients = [], isLoading: clientsLoading } = useClients();
-  const { data: jobsResponse, isLoading: jobsLoading } = useJobs();
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs({}, 1, 1000);
   const createApplication = useCreateApplication();
   const scopedClients = currentClientId ? clients.filter((client) => client.id === currentClientId) : clients;
   const jobs = jobsResponse?.data || [];
@@ -96,9 +97,39 @@ export function SubmitApplicationModal({
     }
   }, [currentClientId, form]);
 
+  useEffect(() => {
+    if (!open || currentClientId) {
+      return;
+    }
+
+    const currentValue = form.getValues('clientId');
+    if (currentValue) {
+      return;
+    }
+
+    if (scopedClients.length === 0) {
+      return;
+    }
+
+    const preferredClient =
+      scopedClients.find((client) =>
+        scopedJobs.some((job) => job.clientId === client.id)
+      ) || scopedClients[0];
+
+    form.setValue('clientId', preferredClient.id, { shouldValidate: true });
+  }, [open, currentClientId, form, scopedClients, scopedJobs]);
+
   const selectedClientId = form.watch('clientId');
   const selectedJobId = form.watch('jobId');
   const selectedClient = scopedClients.find(c => c.id === selectedClientId);
+  const eligibleCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.currentStatus !== 'selected'),
+    [candidates]
+  );
+  const ineligibleCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.currentStatus === 'selected'),
+    [candidates]
+  );
   const availableJobs = useMemo(
     () => scopedJobs.filter((job) => job.clientId === selectedClientId),
     [scopedJobs, selectedClientId]
@@ -112,10 +143,15 @@ export function SubmitApplicationModal({
   }, [availableJobs, form, selectedJobId]);
 
   const handleSubmit = async (values: FormValues) => {
+    if (eligibleCandidates.length === 0) {
+      toast.error('No eligible candidates selected for application creation.');
+      return;
+    }
+
     setIsSubmitting(true);
     const submissionResults: SubmissionResult[] = [];
 
-    for (const candidate of candidates) {
+    for (const candidate of eligibleCandidates) {
       try {
         const selectedJob = scopedJobs.find((job) => job.id === values.jobId);
         await createApplication.mutateAsync({
@@ -147,13 +183,13 @@ export function SubmitApplicationModal({
 
     if (successCount > 0) {
       toast.success(
-        `Submitted ${successCount} candidate${successCount > 1 ? 's' : ''} to ${selectedClient?.name}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`
+        `Submitted ${successCount} candidate${successCount > 1 ? 's' : ''} to ${selectedClient?.name}${errorCount > 0 ? ` (${errorCount} failed)` : ''}${ineligibleCandidates.length > 0 ? ` (${ineligibleCandidates.length} skipped)` : ''}`
       );
     } else {
       toast.error('All submissions failed. Please try again.');
     }
 
-    if (errorCount === 0) {
+    if (successCount > 0) {
       onSuccess();
     }
   };
@@ -240,6 +276,11 @@ export function SubmitApplicationModal({
               {candidates.length} candidate{candidates.length > 1 ? 's' : ''} selected
             </span>
           </div>
+          {ineligibleCandidates.length > 0 && (
+            <p className="mb-2 text-xs text-amber-700">
+              {ineligibleCandidates.length} candidate{ineligibleCandidates.length > 1 ? 's are' : ' is'} already in selected status and will be skipped.
+            </p>
+          )}
           <ScrollArea className="max-h-28">
             <div className="flex flex-wrap gap-1.5 pr-2">
               {candidates.map(c => (
@@ -272,12 +313,10 @@ export function SubmitApplicationModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {scopedClients
-                        .filter(c => c.isActive)
-                        .map(client => (
+                      {scopedClients.map(client => (
                           <SelectItem key={client.id} value={client.id}>
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-status-success" />
+                              <div className={`w-2 h-2 rounded-full ${client.isActive ? 'bg-status-success' : 'bg-muted-foreground'}`} />
                               {client.name}
                               <span className="text-xs text-muted-foreground">— {client.industry}</span>
                             </div>
@@ -305,7 +344,7 @@ export function SubmitApplicationModal({
                       <SelectTrigger disabled={jobsLoading || !selectedClientId}>
                         <SelectValue placeholder={
                           !selectedClientId
-                            ? 'Select a client first'
+                            ? 'Loading clients...'
                             : jobsLoading
                             ? 'Loading jobs...'
                             : 'Select a job opening'
@@ -361,7 +400,7 @@ export function SubmitApplicationModal({
               <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="gap-2">
+              <Button type="submit" disabled={isSubmitting || eligibleCandidates.length === 0} className="gap-2">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -370,7 +409,7 @@ export function SubmitApplicationModal({
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    Submit {candidates.length} Candidate{candidates.length > 1 ? 's' : ''}
+                    Submit {eligibleCandidates.length} Candidate{eligibleCandidates.length > 1 ? 's' : ''}
                   </>
                 )}
               </Button>
@@ -381,3 +420,4 @@ export function SubmitApplicationModal({
     </Dialog>
   );
 }
+
