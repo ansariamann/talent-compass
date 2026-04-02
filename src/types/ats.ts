@@ -44,7 +44,7 @@ export interface User {
 
 export interface Candidate {
   id: string;
-  clientId: string;
+  clientId?: string;
   name: string;
   email: string;
   phone?: string;
