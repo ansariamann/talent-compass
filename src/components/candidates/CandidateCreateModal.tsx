@@ -195,7 +195,7 @@ export function CandidateCreateModal({
       ctcExpected: candidate?.ctcExpected,
       source: candidate?.source || "",
       linkedinUrl: candidate?.linkedinUrl || "",
-      status: candidate?.currentStatus || "new",
+      status: (statusValues as readonly string[]).includes(candidate?.currentStatus || "") ? (candidate?.currentStatus as typeof statusValues[number]) : "new",
       resumeUrl: candidate?.resumeUrl || "",
       resumeFilePath: candidate?.resumeFilePath || "",
       remark: candidate?.remark || "",
