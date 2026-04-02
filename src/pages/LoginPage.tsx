@@ -4,8 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Loader2, Shield, Users, Briefcase } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Shield, Users, Briefcase, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -28,7 +27,6 @@ export default function LoginPage() {
     e.preventDefault();
     setErrors({});
 
-    // Validate input
     const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
@@ -58,22 +56,48 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-background to-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%2306b6d4%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
+    <div className="min-h-screen bg-background flex relative overflow-hidden">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[120px] animate-pulse-subtle" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-primary/6 blur-[100px] animate-pulse-subtle" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-[40%] left-[50%] w-[300px] h-[300px] rounded-full bg-primary/4 blur-[80px] animate-pulse-subtle" style={{ animationDelay: '0.5s' }} />
+      </div>
 
-        <div className="relative z-10 flex flex-col justify-center px-12">
-          <div className="mb-12">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
+      {/* Left side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Mesh gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--primary)/0.2)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(var(--primary)/0.1)_0%,transparent_50%)]" />
+
+        {/* Floating geometric shapes */}
+        <div className="absolute top-[15%] right-[15%] w-20 h-20 border border-primary/20 rounded-2xl rotate-12 animate-pulse-subtle" />
+        <div className="absolute top-[60%] right-[25%] w-12 h-12 border border-primary/15 rounded-xl -rotate-12 animate-pulse-subtle" style={{ animationDelay: '0.7s' }} />
+        <div className="absolute bottom-[20%] left-[20%] w-16 h-16 border border-primary/10 rounded-full animate-pulse-subtle" style={{ animationDelay: '1.2s' }} />
+
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)',
+          backgroundSize: '60px 60px'
+        }} />
+
+        <div className="relative z-10 flex flex-col justify-center px-16">
+          <div className="mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-6">
+              <Sparkles className="w-3 h-3" />
+              Applicant Tracking System
+            </div>
+            <h1 className="text-5xl font-bold text-foreground mb-5 leading-tight">
               HR <span className="text-gradient">Management</span>
+              <br />Platform
             </h1>
-            <p className="text-lg text-muted-foreground max-w-md">
+            <p className="text-base text-muted-foreground max-w-sm leading-relaxed">
               Streamline your hiring process with our comprehensive applicant tracking system.
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             <FeatureItem
               icon={<Users className="w-5 h-5" />}
               title="Candidate Management"
@@ -92,29 +116,32 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Decorative elements */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-        <div className="absolute top-1/4 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
+        {/* Bottom gradient line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        {/* Right edge glow */}
+        <div className="absolute top-0 bottom-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
       </div>
 
       {/* Right side - Login form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-primary" />
+      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
+        <div className="w-full max-w-md">
+          {/* Glass card */}
+          <div className="rounded-2xl border border-border/40 bg-card/40 backdrop-blur-xl shadow-2xl shadow-primary/5 p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="mx-auto mb-5 w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                <Shield className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Enter your credentials to access your account
+              </p>
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -131,7 +158,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -175,7 +202,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11 text-sm font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -189,7 +216,14 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/50" />
+              </div>
+            </div>
+
+            <div className="text-center text-sm text-muted-foreground">
               <p>
                 Don't have an account?{' '}
                 <button className="text-primary hover:text-primary/80 transition-colors font-medium">
@@ -197,8 +231,13 @@ export default function LoginPage() {
                 </button>
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Bottom text */}
+          <p className="text-center text-xs text-muted-foreground/50 mt-6">
+            Protected by enterprise-grade encryption
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -214,12 +253,12 @@ function FeatureItem({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-4">
-      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+    <div className="flex items-start gap-4 group">
+      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary group-hover:bg-primary/15 group-hover:shadow-md group-hover:shadow-primary/10 transition-all duration-300">
         {icon}
       </div>
       <div>
-        <h3 className="font-medium text-foreground">{title}</h3>
+        <h3 className="font-medium text-foreground text-sm">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
