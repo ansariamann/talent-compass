@@ -71,6 +71,7 @@ export function useCreateClient() {
     },
     onSuccess: (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
       toast.success('Client created successfully');
       const creds = (createdClient as any)?.provisionedCredentials;
       if (creds) {
@@ -109,6 +110,7 @@ export function useUpdateClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
       toast.success('Client updated successfully');
     },
     onError: (error) => {
@@ -134,6 +136,7 @@ export function useDeleteClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
       toast.success('Client deleted successfully');
     },
     onError: (error) => {

@@ -73,15 +73,6 @@ export function SubmitApplicationModal({
   const isClientScopedUser = user?.role === 'client_admin' || user?.role === 'client_user';
   const currentClientId = isClientScopedUser ? user?.client_id : undefined;
 
-  const { data: clients = [], isLoading: clientsLoading } = useClients();
-  const { data: jobsResponse, isLoading: jobsLoading } = useJobs({}, 1, 1000);
-  const createApplication = useCreateApplication();
-  const scopedClients = currentClientId ? clients.filter((client) => client.id === currentClientId) : clients;
-  const jobs = jobsResponse?.data || [];
-  const scopedJobs = jobs.filter(
-    (job) => job.vacant !== false && (!currentClientId || job.clientId === currentClientId)
-  );
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -90,6 +81,18 @@ export function SubmitApplicationModal({
       submissionNote: '',
     },
   });
+  const selectedClientId = form.watch('clientId');
+  const selectedJobId = form.watch('jobId');
+  const jobFilters = useMemo(
+    () => (selectedClientId ? { clientId: selectedClientId } : {}),
+    [selectedClientId]
+  );
+
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs(jobFilters, 1, 500);
+  const createApplication = useCreateApplication();
+  const scopedClients = currentClientId ? clients.filter((client) => client.id === currentClientId) : clients;
+  const jobs = jobsResponse?.data || [];
 
   useEffect(() => {
     if (currentClientId) {
@@ -111,16 +114,8 @@ export function SubmitApplicationModal({
       return;
     }
 
-    const preferredClient =
-      scopedClients.find((client) =>
-        scopedJobs.some((job) => job.clientId === client.id)
-      ) || scopedClients[0];
-
-    form.setValue('clientId', preferredClient.id, { shouldValidate: true });
-  }, [open, currentClientId, form, scopedClients, scopedJobs]);
-
-  const selectedClientId = form.watch('clientId');
-  const selectedJobId = form.watch('jobId');
+    form.setValue('clientId', scopedClients[0].id, { shouldValidate: true });
+  }, [open, currentClientId, form, scopedClients]);
   const selectedClient = scopedClients.find(c => c.id === selectedClientId);
   const eligibleCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.currentStatus !== 'selected'),
@@ -131,8 +126,15 @@ export function SubmitApplicationModal({
     [candidates]
   );
   const availableJobs = useMemo(
-    () => scopedJobs.filter((job) => job.clientId === selectedClientId),
-    [scopedJobs, selectedClientId]
+    () =>
+      jobs.filter(
+        (job) =>
+          Boolean(selectedClientId) &&
+          job.vacant !== false &&
+          job.clientId === selectedClientId &&
+          (!currentClientId || job.clientId === currentClientId)
+      ),
+    [jobs, selectedClientId, currentClientId]
   );
 
   useEffect(() => {
@@ -153,7 +155,7 @@ export function SubmitApplicationModal({
 
     for (const candidate of eligibleCandidates) {
       try {
-        const selectedJob = scopedJobs.find((job) => job.id === values.jobId);
+        const selectedJob = availableJobs.find((job) => job.id === values.jobId);
         await createApplication.mutateAsync({
           candidateId: candidate.id,
           clientId: currentClientId || values.clientId,
@@ -342,9 +344,9 @@ export function SubmitApplicationModal({
                   <Select onValueChange={field.onChange} value={field.value} disabled={!selectedClientId}>
                     <FormControl>
                       <SelectTrigger disabled={jobsLoading || !selectedClientId}>
-                        <SelectValue placeholder={
+                          <SelectValue placeholder={
                           !selectedClientId
-                            ? 'Loading clients...'
+                            ? 'Select a client first'
                             : jobsLoading
                             ? 'Loading jobs...'
                             : 'Select a job opening'

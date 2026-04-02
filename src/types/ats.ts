@@ -328,6 +328,7 @@ export interface ApplicationFilters {
 
 export interface JobFilters {
   search?: string;
+  clientId?: string;
   companyName?: string;
   jobTitle?: string;
   field?: string;

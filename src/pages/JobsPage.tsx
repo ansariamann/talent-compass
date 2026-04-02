@@ -9,7 +9,7 @@ import { JobFormModal } from '@/components/jobs/JobFormModal';
 import { JobsFilterSheet } from '@/components/jobs/JobsFilterSheet';
 import { useCreateJob, useJobs } from '@/hooks/useJobs';
 import { useClients } from '@/hooks/useClients';
-import { AlertCircle, Loader2, Plus } from 'lucide-react';
+import { AlertCircle, Loader2, Plus, RefreshCw } from 'lucide-react';
 import type { JobFilters } from '@/types/ats';
 import { toast } from 'sonner';
 
@@ -26,7 +26,7 @@ export default function JobsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [seenClientJobIds, setSeenClientJobIds] = useState<string[]>([]);
 
-  const { data: jobsResponse, isLoading, error, refetch } = useJobs(
+  const { data: jobsResponse, isLoading, isFetching, error, refetch } = useJobs(
     { ...filters, search: searchQuery },
     page,
     25
@@ -140,6 +140,15 @@ export default function JobsPage() {
           />
 
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <JobsFilterSheet
               value={filters}
               onChange={(next) => {

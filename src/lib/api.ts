@@ -826,6 +826,7 @@ export const jobsApi = {
       limit: String(pageSize),
     });
 
+    if (filters.clientId) params.set('client_id', filters.clientId);
     if (filters.search) params.set('search', filters.search);
     if (filters.companyName) params.set('company_name', filters.companyName);
     if (filters.jobTitle) params.set('job_title', filters.jobTitle);

@@ -66,7 +66,6 @@ export function ApplicationFormModal({
   const isEditing = Boolean(application);
   const [candidatePickerOpen, setCandidatePickerOpen] = useState(false);
   const [candidateQuery, setCandidateQuery] = useState("");
-  const { data: jobsResponse, isLoading: jobsLoading } = useJobs({}, 1, 500);
 
   const createForm = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
@@ -102,6 +101,11 @@ export function ApplicationFormModal({
   const selectedClientId = createForm.watch("clientId");
   const selectedCandidateId = createForm.watch("candidateId");
   const selectedJobId = createForm.watch("jobId");
+  const jobFilters = useMemo(
+    () => (selectedClientId ? { clientId: selectedClientId } : {}),
+    [selectedClientId]
+  );
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs(jobFilters, 1, 500);
 
   const availableCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.currentStatus !== "selected"),
@@ -110,8 +114,8 @@ export function ApplicationFormModal({
 
   const availableJobs = useMemo(() => {
     const jobs = jobsResponse?.data || [];
-    return jobs.filter((job) => job.vacant !== false && (!selectedClientId || job.clientId === selectedClientId));
-  }, [jobsResponse, selectedClientId]);
+    return jobs.filter((job) => job.vacant !== false);
+  }, [jobsResponse]);
 
   const selectedJob = useMemo(
     () => availableJobs.find((job) => job.id === selectedJobId),
