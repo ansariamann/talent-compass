@@ -3,23 +3,31 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ClientFormModal } from '@/components/clients/ClientFormModal';
 import { ClientActionsMenu } from '@/components/clients/ClientActionsMenu';
-import { 
-  useClients, 
-  useCreateClient, 
-  useUpdateClient, 
-  useDeleteClient, 
+import {
+  useClients,
+  useCreateClient,
+  useUpdateClient,
+  useDeleteClient,
   useSendClientInvite,
-  useToggleClientActive 
+  useToggleClientActive
 } from '@/hooks/useClients';
 import { mockApplications } from '@/lib/mock-data';
-import { Building2, Mail, User, Phone, Plus, Search, Link, CheckCircle2, Clock, MapPin, Globe } from 'lucide-react';
+import { Building2, Mail, User, Phone, Plus, Search, Link, CheckCircle2, Clock, MapPin, Globe, Info } from 'lucide-react';
 import type { Client } from '@/types/ats';
 
 export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
+  const [showClientStats, setShowClientStats] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading } = useClients();
@@ -29,7 +37,7 @@ export default function ClientsPage() {
   const sendInvite = useSendClientInvite();
   const toggleActive = useToggleClientActive();
 
-  const filteredClients = clients.filter(client => 
+  const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (client.industry || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (client.contactName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -68,12 +76,21 @@ export default function ClientsPage() {
     toggleActive.mutate({ id: clientId, isActive });
   };
 
+  const totalClients = clients.length;
+  const activeClients = clients.filter((client) => client.isActive).length;
+  const registeredClients = clients.filter((client) => client.isRegistered).length;
+  const pendingInvites = clients.filter((client) => client.registrationToken && !client.isRegistered).length;
+
   return (
     <DashboardLayout title="Clients">
+
       <div className="p-6 space-y-6">
+
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+
           <div className="relative flex-1 max-w-md">
+
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search clients..."
@@ -81,32 +98,18 @@ export default function ClientsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
-          </div>
-          <Button onClick={handleAddClient} className="btn-vibrant">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Client
-          </Button>
-        </div>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="glass p-4 rounded-lg">
-            <div className="text-2xl font-bold gradient-text">{clients.length}</div>
-            <div className="text-sm text-muted-foreground">Total Clients</div>
           </div>
-          <div className="glass p-4 rounded-lg">
-            <div className="text-2xl font-bold text-green-400">{clients.filter(c => c.isActive).length}</div>
-            <div className="text-sm text-muted-foreground">Active</div>
-          </div>
-          <div className="glass p-4 rounded-lg">
-            <div className="text-2xl font-bold text-blue-400">{clients.filter(c => c.isRegistered).length}</div>
-            <div className="text-sm text-muted-foreground">Registered</div>
-          </div>
-          <div className="glass p-4 rounded-lg">
-            <div className="text-2xl font-bold text-amber-400">
-              {clients.filter(c => c.registrationToken && !c.isRegistered).length}
-            </div>
-            <div className="text-sm text-muted-foreground">Pending Invite</div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setShowClientStats(true)}>
+              <Info className="w-4 h-4 mr-2" />
+
+            </Button>
+
+            <Button onClick={handleAddClient} className="btn-vibrant">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Client
+            </Button>
           </div>
         </div>
 
@@ -135,9 +138,9 @@ export default function ClientsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredClients.map((client) => {
               const applicationCount = mockApplications.filter(a => a.clientId === client.id).length;
-              
+
               return (
-                <div 
+                <div
                   key={client.id}
                   className="panel hover:border-primary/30 transition-all duration-300 group"
                 >
@@ -146,7 +149,7 @@ export default function ClientsPage() {
                       <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-vibrant-purple/20 flex items-center justify-center">
                         <Building2 className="w-6 h-6 text-primary" />
                       </div>
-                      <ClientActionsMenu 
+                      <ClientActionsMenu
                         client={client}
                         onEdit={handleEditClient}
                         onDelete={handleDeleteClient}
@@ -240,6 +243,36 @@ export default function ClientsPage() {
         client={selectedClient}
         onSubmit={handleSubmitClient}
       />
+
+      <Dialog open={showClientStats} onOpenChange={setShowClientStats}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Client Summary</DialogTitle>
+            <DialogDescription>
+              Snapshot of client onboarding and activation status.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="glass p-4 rounded-lg">
+              <div className="text-2xl font-bold gradient-text">{totalClients}</div>
+              <div className="text-sm text-muted-foreground">Total Clients</div>
+            </div>
+            <div className="glass p-4 rounded-lg">
+              <div className="text-2xl font-bold text-green-400">{activeClients}</div>
+              <div className="text-sm text-muted-foreground">Active</div>
+            </div>
+            <div className="glass p-4 rounded-lg">
+              <div className="text-2xl font-bold text-blue-400">{registeredClients}</div>
+              <div className="text-sm text-muted-foreground">Registered</div>
+            </div>
+            <div className="glass p-4 rounded-lg">
+              <div className="text-2xl font-bold text-amber-400">{pendingInvites}</div>
+              <div className="text-sm text-muted-foreground">Pending Invite</div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -74,12 +74,51 @@ class ApiError extends Error {
   }
 }
 
+function shouldTrackDashboardActivity(endpoint: string, method: string): boolean {
+  // Avoid logging passive read/access behavior (page/data fetches).
+  if (method === 'GET') return false;
+  return !endpoint.startsWith('/activity-logs');
+}
+
+function trackDashboardActivity(
+  token: string,
+  endpoint: string,
+  method: string,
+  statusCode: number,
+  durationMs: number
+): void {
+  if (!shouldTrackDashboardActivity(endpoint, method)) return;
+
+  const details = {
+    endpoint,
+    method,
+    status_code: statusCode,
+    duration_ms: durationMs,
+  };
+
+  void fetch(`${API_BASE}/activity-logs/track`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      action_type: 'HR_DASHBOARD_API_REQUEST',
+      details,
+    }),
+  }).catch(() => {
+    // Best-effort only; do not block primary API flows.
+  });
+}
+
 // Authenticated fetch wrapper
 async function fetchWithAuth<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const token = getAuthToken();
+  const method = (options.method || 'GET').toUpperCase();
+  const startedAt = Date.now();
 
 
   const headers: Record<string, string> = {
@@ -95,6 +134,10 @@ async function fetchWithAuth<T>(
     ...options,
     headers,
   });
+
+  if (token) {
+    trackDashboardActivity(token, endpoint, method, response.status, Date.now() - startedAt);
+  }
 
   if (response.status === 401) {
     clearAuthToken();

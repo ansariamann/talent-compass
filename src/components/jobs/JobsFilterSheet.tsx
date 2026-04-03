@@ -45,7 +45,6 @@ export function JobsFilterSheet({
       'maxExperience',
       'minSalaryLpa',
       'maxSalaryLpa',
-      'sort',
     ];
     return keys.reduce((acc, k) => (value[k] == null || value[k] === '' ? acc : acc + 1), 0);
   }, [value]);
