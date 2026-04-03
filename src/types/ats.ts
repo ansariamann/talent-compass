@@ -333,6 +333,7 @@ export interface JobFilters {
   jobTitle?: string;
   field?: string;
   location?: string;
+  includeFilled?: boolean;
   minExperience?: number;
   maxExperience?: number;
   minSalaryLpa?: number;

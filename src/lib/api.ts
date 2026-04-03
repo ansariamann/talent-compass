@@ -470,8 +470,18 @@ export const candidatesApi = {
     });
 
     // Add filters
-    if (filters.search) params.set('name_pattern', filters.search);
-    if (filters.skills?.length) params.set('skills', filters.skills.join(','));
+    const explicitSkills = (filters.skills || []).map((skill) => skill.trim()).filter(Boolean);
+    const searchParts = (filters.search || '').split(',').map((part) => part.trim()).filter(Boolean);
+    const multiSkillSearch = searchParts.length > 1;
+
+    if (!multiSkillSearch && searchParts.length === 1) {
+      params.set('name_pattern', searchParts[0]);
+    }
+
+    const mergedSkills = Array.from(
+      new Set([...explicitSkills, ...(multiSkillSearch ? searchParts : [])])
+    );
+    if (mergedSkills.length) params.set('skills', mergedSkills.join(','));
     if (filters.location) params.set('location', filters.location);
     if (filters.isDirectInterview !== undefined) params.set('is_direct_interview', String(filters.isDirectInterview));
     if (filters.minExperience !== undefined) params.set('min_experience', String(filters.minExperience));
@@ -536,11 +546,13 @@ export const candidatesApi = {
   },
 
   search: async (query: string): Promise<Candidate[]> => {
-    // Backend only has email search, so we use list with name_pattern
-    const params = new URLSearchParams({
-      name_pattern: query,
-      limit: '50',
-    });
+    const params = new URLSearchParams({ limit: '50' });
+    const parts = query.split(',').map((part) => part.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      params.set('skills', parts.join(','));
+    } else if (parts.length === 1) {
+      params.set('name_pattern', parts[0]);
+    }
     const response = await fetchWithAuth<BackendCandidate[]>(`/candidates?${params}`);
     return response.map(transformCandidate);
   },
@@ -832,6 +844,7 @@ export const jobsApi = {
     if (filters.jobTitle) params.set('job_title', filters.jobTitle);
     if (filters.field) params.set('field', filters.field);
     if (filters.location) params.set('location', filters.location);
+    if (filters.includeFilled !== undefined) params.set('include_filled', String(filters.includeFilled));
     if (filters.minExperience !== undefined) params.set('min_experience', String(filters.minExperience));
     if (filters.maxExperience !== undefined) params.set('max_experience', String(filters.maxExperience));
     if (filters.minSalaryLpa !== undefined) params.set('min_salary_lpa', String(filters.minSalaryLpa));

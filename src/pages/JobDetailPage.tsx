@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 export default function JobDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: job, isLoading, error } = useJob(id);
+  const { data: job, isLoading, isFetching, error, refetch: refetchJob } = useJob(id);
   const deleteJob = useDeleteJob();
 
   const [submitOpen, setSubmitOpen] = useState(false);
@@ -57,6 +57,15 @@ export default function JobDetailPage() {
       </DashboardLayout>
     );
   }
+
+  const handleOpenSubmit = async () => {
+    const { data: latestJob } = await refetchJob();
+    if (!latestJob || latestJob.vacant === false) {
+      toast.error('This job is already filled and cannot accept new candidate submissions.');
+      return;
+    }
+    setSubmitOpen(true);
+  };
 
   return (
     <DashboardLayout title="Job Profile">
@@ -92,7 +101,7 @@ export default function JobDetailPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => setSubmitOpen(true)} disabled={job.vacant === false}>
+            <Button onClick={handleOpenSubmit} disabled={job.vacant === false || isFetching}>
               Submit Candidates
             </Button>
             <AlertDialog>

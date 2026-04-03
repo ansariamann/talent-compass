@@ -20,7 +20,7 @@ export default function JobsPage() {
   const createJob = useCreateJob();
   const { data: clients = [] } = useClients();
 
-  const [filters, setFilters] = useState<JobFilters>({ sort: 'newest' });
+  const [filters, setFilters] = useState<JobFilters>({ sort: 'newest', includeFilled: false });
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);
