@@ -161,6 +161,7 @@ export function SubmitApplicationModal({
           clientId: currentClientId || values.clientId,
           jobId: values.jobId,
           jobTitle: selectedJob?.title,
+          note: values.submissionNote?.trim() || undefined,
         });
         submissionResults.push({
           candidateId: candidate.id,

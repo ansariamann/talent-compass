@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useState } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Info, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DirectInterviewForm } from "@/components/candidates/DirectInterviewForm";
 import { DirectSelectionModal } from "@/components/candidates/DirectSelectionModal";
@@ -48,6 +48,7 @@ export default function DirectInterviewPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearch = useDeferredValue(searchQuery);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [totalCandidates, setTotalCandidates] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
@@ -69,6 +70,7 @@ export default function DirectInterviewPage() {
     if (!isAdmin) return;
     if (!hasSearchQuery) {
       setCandidates([]);
+      setTotalCandidates(0);
       setIsLoading(false);
       setError(null);
       return;
@@ -81,6 +83,7 @@ export default function DirectInterviewPage() {
         const response = await candidatesApi.list(mapTabToFilters(activeTab, deferredSearch.trim()), 1, 100);
         if (!cancelled) {
           setCandidates(response.data);
+          setTotalCandidates(response.total);
         }
       } catch (e) {
         if (!cancelled) {
@@ -103,6 +106,7 @@ export default function DirectInterviewPage() {
         ? await candidatesApi.list(mapTabToFilters(activeTab, deferredSearch.trim()), 1, 100)
         : { data: [], total: 0, page: 1, pageSize: 100, totalPages: 0 };
       setCandidates(candidateResponse.data);
+      setTotalCandidates(candidateResponse.total);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to refresh direct interview data";
       setError(message);
@@ -120,6 +124,14 @@ export default function DirectInterviewPage() {
     toast.success("Candidate selected successfully");
     await refreshAll();
     setActiveTab("selected");
+  };
+
+  const handleShowTotalCandidates = () => {
+    if (!hasSearchQuery) {
+      toast.info("Search first to see total candidates.");
+      return;
+    }
+    toast.info(`Total candidates: ${totalCandidates}`);
   };
 
   if (!isAdmin) {
@@ -162,6 +174,10 @@ export default function DirectInterviewPage() {
             className="max-w-2xl"
           />
           <div className="flex gap-2">
+            <Button variant="outline" onClick={handleShowTotalCandidates}>
+              <Info className="mr-2 h-4 w-4" />
+              Info
+            </Button>
             <Button onClick={() => setIsAssignExistingOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Assign Existing Candidate
@@ -174,7 +190,6 @@ export default function DirectInterviewPage() {
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DirectInterviewTab)}>
           <TabsList>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="interviewed">Interviewed</TabsTrigger>
             <TabsTrigger value="selected">Selected</TabsTrigger>
           </TabsList>

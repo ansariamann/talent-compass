@@ -23,7 +23,6 @@ export function Header({ title, isConnected = true, onSearch, searchComponent }:
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 variant="search"
-                placeholder="Search... (⌘K)"
                 className="w-64"
                 onChange={(e) => onSearch(e.target.value)}
               />

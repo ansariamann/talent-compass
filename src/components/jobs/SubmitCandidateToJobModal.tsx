@@ -117,6 +117,7 @@ export function SubmitCandidateToJobModal({
           clientId: job.clientId,
           jobId: job.id,
           jobTitle: job.title,
+          note: values.submissionNote?.trim() || undefined,
         });
         submissionResults.push({
           candidateId: candidate.id,

@@ -39,6 +39,16 @@ interface DatabaseSourceInfo {
   timestamp: string;
 }
 
+const ID_COLUMN_PATTERN = /(^| )ID$/i;
+
+function hashStringTo4DigitSeed(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % 10000;
+}
+
 export default function DatabasePage() {
   const { table = 'candidates' } = useParams<{ table?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,22 +71,59 @@ export default function DatabasePage() {
       ]);
 
       const data: Record<string, TableData> = {};
+      const idMap = new Map<string, string>();
+      const usedDisplayIds = new Set<string>();
+      const toDisplayId = (rawId: string): string => {
+        const existing = idMap.get(rawId);
+        if (existing) return existing;
+
+        const base = hashStringTo4DigitSeed(rawId);
+        for (let offset = 0; offset < 10000; offset += 1) {
+          const candidate = ((base + offset) % 10000).toString().padStart(4, '0');
+          if (!usedDisplayIds.has(candidate)) {
+            usedDisplayIds.add(candidate);
+            idMap.set(rawId, candidate);
+            return candidate;
+          }
+        }
+        // Fallback should never happen in practice, but keep a deterministic output.
+        const fallback = base.toString().padStart(4, '0');
+        idMap.set(rawId, fallback);
+        return fallback;
+      };
+
+      const formatIdLike = (value: string): string => {
+        if (!value || value === '-') return value;
+        return toDisplayId(value);
+      };
+
+      const formatRowIdsByColumns = (columns: string[], row: string[]): string[] => {
+        return row.map((cell, index) => {
+          if (ID_COLUMN_PATTERN.test(columns[index])) {
+            return formatIdLike(cell);
+          }
+          return cell;
+        });
+      };
 
       // Candidates
       if (candidatesRes.status === 'fulfilled') {
         const candidates = candidatesRes.value.data;
+        const columns = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Experience', 'Skills', 'Created At'];
         data.candidates = {
-          columns: ['ID', 'Name', 'Email', 'Phone', 'Status', 'Experience', 'Skills', 'Created At'],
-          rows: candidates.map(c => [
-            c.id,
-            c.name,
-            c.email || '-',
-            c.phone || '-',
-            c.currentStatus,
-            c.experience ? `${c.experience} yrs` : '-',
-            c.skills?.slice(0, 3).join(', ') || '-',
-            new Date(c.createdAt).toLocaleDateString(),
-          ]),
+          columns,
+          rows: candidates.map(c =>
+            formatRowIdsByColumns(columns, [
+              c.id,
+              c.name,
+              c.email || '-',
+              c.phone || '-',
+              c.currentStatus,
+              c.experience ? `${c.experience} yrs` : '-',
+              c.skills?.slice(0, 3).join(', ') || '-',
+              new Date(c.createdAt).toLocaleDateString(),
+            ])
+          ),
         };
       } else {
         data.candidates = { columns: ['Error'], rows: [['Failed to load candidates: ' + candidatesRes.reason]] };
@@ -85,16 +132,19 @@ export default function DatabasePage() {
       // Applications
       if (applicationsRes.status === 'fulfilled') {
         const applications = applicationsRes.value.data;
+        const columns = ['ID', 'Candidate ID', 'Client ID', 'Job Title', 'Status', 'Submitted'];
         data.applications = {
-          columns: ['ID', 'Candidate ID', 'Client ID', 'Job Title', 'Status', 'Submitted'],
-          rows: applications.map(a => [
-            a.id,
-            a.candidateId,
-            a.clientId,
-            a.jobTitle,
-            a.status,
-            new Date(a.submittedAt).toLocaleDateString(),
-          ]),
+          columns,
+          rows: applications.map(a =>
+            formatRowIdsByColumns(columns, [
+              a.id,
+              a.candidateId,
+              a.clientId,
+              a.jobTitle,
+              a.status,
+              new Date(a.submittedAt).toLocaleDateString(),
+            ])
+          ),
         };
       } else {
         data.applications = { columns: ['Error'], rows: [['Failed to load applications: ' + applicationsRes.reason]] };
@@ -103,17 +153,20 @@ export default function DatabasePage() {
       // Clients
       if (clientsList.status === 'fulfilled') {
         const clients = clientsList.value;
+        const columns = ['ID', 'Name', 'Industry', 'Contact Name', 'Contact Email', 'Active', 'Created At'];
         data.clients = {
-          columns: ['ID', 'Name', 'Industry', 'Contact Name', 'Contact Email', 'Active', 'Created At'],
-          rows: clients.map((c: any) => [
-            c.id,
-            c.name || c.company_name || '-',
-            c.industry || '-',
-            c.contactName || c.contact_name || '-',
-            c.contactEmail || c.contact_email || '-',
-            (c.isActive ?? c.is_active) ? 'Yes' : 'No',
-            c.createdAt || c.created_at ? new Date(c.createdAt || c.created_at).toLocaleDateString() : '-',
-          ]),
+          columns,
+          rows: clients.map((c: any) =>
+            formatRowIdsByColumns(columns, [
+              c.id,
+              c.name || c.company_name || '-',
+              c.industry || '-',
+              c.contactName || c.contact_name || '-',
+              c.contactEmail || c.contact_email || '-',
+              (c.isActive ?? c.is_active) ? 'Yes' : 'No',
+              c.createdAt || c.created_at ? new Date(c.createdAt || c.created_at).toLocaleDateString() : '-',
+            ])
+          ),
         };
       } else {
         data.clients = { columns: ['Error'], rows: [['Failed to load clients: ' + clientsList.reason]] };
@@ -122,18 +175,21 @@ export default function DatabasePage() {
       // Jobs
       if (jobsRes.status === 'fulfilled') {
         const jobs = jobsRes.value.data;
+        const columns = ['ID', 'Title', 'Company / Client', 'Vacant', 'Experience', 'Salary (LPA)', 'Location', 'Created At'];
         data.jobs = {
-          columns: ['ID', 'Title', 'Company / Client', 'Vacant', 'Experience', 'Salary (LPA)', 'Location', 'Created At'],
-          rows: jobs.map(j => [
-            j.id,
-            j.title,
-            j.companyName || j.clientId || '-',
-            j.vacant !== false ? 'Yes' : 'No',
-            j.experienceRequired !== undefined ? `${j.experienceRequired} yrs` : '-',
-            j.salaryLpa !== undefined ? j.salaryLpa.toString() : '-',
-            j.location || '-',
-            j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '-',
-          ]),
+          columns,
+          rows: jobs.map(j =>
+            formatRowIdsByColumns(columns, [
+              j.id,
+              j.title,
+              j.companyName || (j.clientId ? formatIdLike(j.clientId) : '-') || '-',
+              j.vacant !== false ? 'Yes' : 'No',
+              j.experienceRequired !== undefined ? `${j.experienceRequired} yrs` : '-',
+              j.salaryLpa !== undefined ? j.salaryLpa.toString() : '-',
+              j.location || '-',
+              j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '-',
+            ])
+          ),
         };
       } else {
         data.jobs = { columns: ['Error'], rows: [['Failed to load jobs: ' + jobsRes.reason]] };

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -31,6 +32,7 @@ const createSchema = z.object({
   candidateId: z.string().min(1, "Please select a candidate"),
   clientId: z.string().min(1, "Please select a client"),
   jobId: z.string().min(1, "Please select a vacant job"),
+  note: z.string().optional(),
 });
 
 const editSchema = z.object({
@@ -43,7 +45,7 @@ type EditFormValues = z.infer<typeof editSchema>;
 interface ApplicationFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string }) => Promise<void>;
+  onSubmit: (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string; note?: string }) => Promise<void>;
   onUpdate?: (id: string, data: { jobTitle?: string }) => Promise<void>;
   application?: Application | null;
   candidates: Candidate[];
@@ -73,6 +75,7 @@ export function ApplicationFormModal({
       candidateId: "",
       clientId: "",
       jobId: "",
+      note: "",
     },
   });
 
@@ -93,6 +96,7 @@ export function ApplicationFormModal({
         candidateId: "",
         clientId: currentClientId || clients[0]?.id || "",
         jobId: "",
+        note: "",
       });
       setCandidateQuery("");
     }
@@ -152,6 +156,7 @@ export function ApplicationFormModal({
       clientId: values.clientId,
       jobId: values.jobId,
       jobTitle: selectedJob?.title,
+      note: values.note,
     });
     onOpenChange(false);
   };
@@ -379,6 +384,24 @@ export function ApplicationFormModal({
                         )}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={createForm.control}
+                name="note"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Add any relevant notes..."
+                        className="resize-none min-h-[90px]"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

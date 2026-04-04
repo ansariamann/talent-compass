@@ -760,7 +760,7 @@ export const applicationsApi = {
     return transformApplication(response);
   },
 
-  create: async (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string }): Promise<Application> => {
+  create: async (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string; note?: string }): Promise<Application> => {
     const backendData: Record<string, unknown> = {
       candidate_id: data.candidateId,
       client_id: data.clientId,
@@ -768,6 +768,9 @@ export const applicationsApi = {
     };
     if (data.jobId) {
       backendData.job_id = data.jobId;
+    }
+    if (data.note) {
+      backendData.notes = data.note;
     }
     const response = await fetchWithAuth<BackendApplication>('/applications', {
       method: 'POST',
