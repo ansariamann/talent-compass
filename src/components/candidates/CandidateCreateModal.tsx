@@ -272,6 +272,23 @@ export function CandidateCreateModal({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {isEditMode && (
+              <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-2">
+                <div>
+                  <div className="text-sm font-medium">Assigned Client</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {candidate?.client || "Not assigned"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium">Client ID</div>
+                  <div className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                    {candidate?.clientId || "Blank"}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
