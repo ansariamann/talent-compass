@@ -280,12 +280,9 @@ export default function CandidatesPage() {
               {error.message ||
                 "An unexpected error occurred. Please try again."}
             </p>
-            <button
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
+            <Button onClick={() => refetch()} size="sm">
               Retry
-            </button>
+            </Button>
           </div>
         </div>
       </DashboardLayout>
@@ -343,31 +340,31 @@ export default function CandidatesPage() {
 
           {/* Pagination */}
           {filteredCandidates.length > pageSize && (
-            <div className="shrink-0 p-4 border-t border-border flex items-center justify-between">
+            <div className="shrink-0 px-6 py-3 border-t border-border flex items-center justify-between bg-muted/20">
               <span className="text-sm text-muted-foreground">
                 Showing {paginatedCandidates.length} of{" "}
                 {filteredCandidates.length} candidates
               </span>
-              <div className="flex gap-2">
-                <button
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
                 >
                   Previous
-                </button>
-                <span className="px-3 py-1 text-sm">
-                  Page {page} of {totalPages}
+                </Button>
+                <span className="px-2 text-sm text-muted-foreground">
+                  {page} / {totalPages}
                 </span>
-                <button
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}
