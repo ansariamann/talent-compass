@@ -121,20 +121,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div
-          className="absolute top-[55%] right-[5%] w-36 h-24 rounded-2xl border border-primary/10 bg-primary/5 backdrop-blur-sm"
-        >
-          <div className="p-3">
-            <div className="flex -space-x-2 mb-2">
-              {['bg-primary/30', 'bg-[hsl(var(--status-success))]/30', 'bg-[hsl(var(--status-warning))]/30'].map((bg, i) => (
-                <div key={i} className={`w-7 h-7 rounded-full ${bg} border-2 border-background flex items-center justify-center text-[10px] font-medium text-foreground`}>
-                  {['AJ', 'MG', 'JW'][i]}
-                </div>
-              ))}
-            </div>
-            <div className="text-xs text-muted-foreground">Active candidates</div>
-          </div>
-        </div>
 
         {/* Main content */}
         <div className="relative z-10 flex flex-col justify-center px-16 max-w-xl">
