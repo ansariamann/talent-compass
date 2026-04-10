@@ -36,6 +36,12 @@ interface CandidateDetailModalProps {
   onCandidateUpdated: (candidate: Candidate) => void;
 }
 
+function formatDateTime(value?: string): string {
+  if (!value) return 'Not specified';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : format(date, 'MMM d, yyyy - h:mm a');
+}
+
 function getMostRecentWorkSummary(candidate: Candidate): { title?: string; company?: string; dates?: string } | null {
   const work = candidate.resumeParsed?.workHistory || [];
   if (!Array.isArray(work) || work.length === 0) return null;
@@ -214,6 +220,110 @@ export function CandidateDetailModal({
                   </div>
                 </section>
               )}
+
+              <section>
+                <h3 className="text-sm font-semibold">All Candidate Details</h3>
+                <Separator className="my-3" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Candidate ID</div>
+                    <div className="mt-1 text-sm break-all">{candidate.id}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Client ID</div>
+                    <div className="mt-1 text-sm break-all">{candidate.clientId || 'Not specified'}</div>
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Date of Birth</div>
+                    <div className="mt-1 text-sm">{candidate.dateOfBirth || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Key Skill</div>
+                    <div className="mt-1 text-sm">{candidate.keySkill || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Total Experience (Years)</div>
+                    <div className="mt-1 text-sm">{candidate.totalExperienceYears ?? 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Notice Period (Days)</div>
+                    <div className="mt-1 text-sm">{candidate.noticePeriodDays ?? 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Source</div>
+                    <div className="mt-1 text-sm">{candidate.source || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">LinkedIn URL</div>
+                    <div className="mt-1 text-sm break-all">
+                      {candidate.linkedinUrl ? (
+                        <a
+                          href={candidate.linkedinUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary underline-offset-4 hover:underline"
+                        >
+                          {candidate.linkedinUrl}
+                        </a>
+                      ) : (
+                        'Not specified'
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Assigned Client</div>
+                    <div className="mt-1 text-sm">{candidate.client || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Assigned User ID</div>
+                    <div className="mt-1 text-sm break-all">{candidate.assignedUserId || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Resume File Path</div>
+                    <div className="mt-1 text-sm break-all">{candidate.resumeFilePath || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Resume URL</div>
+                    <div className="mt-1 text-sm break-all">{candidate.resumeUrl || 'Not specified'}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Current Status</div>
+                    <div className="mt-1 text-sm">{candidate.currentStatus}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Flags</div>
+                    <div className="mt-1 text-sm">
+                      Direct Interview: {candidate.isDirectInterview ? 'Yes' : 'No'} | Blacklisted:{' '}
+                      {candidate.isBlacklisted ? 'Yes' : 'No'} | Leaver: {candidate.isLeaver ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Created At</div>
+                    <div className="mt-1 text-sm">{formatDateTime(candidate.createdAt)}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <div className="text-xs text-muted-foreground">Updated At</div>
+                    <div className="mt-1 text-sm">{formatDateTime(candidate.updatedAt)}</div>
+                  </div>
+                </div>
+                <div className="mt-3 rounded-lg border border-border bg-card p-3">
+                  <div className="text-xs text-muted-foreground">Previous Employment (Raw)</div>
+                  <pre className="mt-2 text-xs whitespace-pre-wrap break-words text-muted-foreground">
+                    {candidate.previousEmployment
+                      ? JSON.stringify(candidate.previousEmployment, null, 2)
+                      : 'Not specified'}
+                  </pre>
+                </div>
+                <div className="mt-3 rounded-lg border border-border bg-card p-3">
+                  <div className="text-xs text-muted-foreground">Other Details (Raw)</div>
+                  <pre className="mt-2 text-xs whitespace-pre-wrap break-words text-muted-foreground">
+                    {candidate.otherDetails
+                      ? JSON.stringify(candidate.otherDetails, null, 2)
+                      : 'Not specified'}
+                  </pre>
+                </div>
+              </section>
             </TabsContent>
 
             <TabsContent value="resume" className="p-6 mt-0">
@@ -363,6 +473,7 @@ export function CandidateDetailModal({
             timeline={timeline}
             applications={applications}
             clients={clients}
+            showRejectAction={false}
             onUpdated={(updatedCandidate) => {
               onCandidateUpdated(updatedCandidate);
               candidatesApi.getTimeline(updatedCandidate.id).then(setTimeline).catch(() => undefined);

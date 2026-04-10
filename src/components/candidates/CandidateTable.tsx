@@ -151,8 +151,6 @@ export function CandidateTable({
             <th>Phone</th>
             <th>Company</th>
             <th>Location</th>
-            <th>Present Address</th>
-            <th>Permanent Address</th>
             <th>Date of Birth</th>
             <th>Key Skill</th>
             <th>Skills</th>
@@ -214,26 +212,11 @@ export function CandidateTable({
                     />
                   </td>
                 )}
-                <td>
-                  <div className="min-w-[180px]">
-                    <div className="font-medium">{candidate.name}</div>
-                    {candidate.potentialDuplicates?.length ? (
-                      <Badge variant="warning" className="mt-1">
-                        Potential Duplicate
-                      </Badge>
-                    ) : null}
-                  </div>
-                </td>
+                <td>{candidate.name}</td>
                 <td>{candidate.email || "-"}</td>
                 <td>{candidate.phone || "-"}</td>
                 <td>{candidate.company || "-"}</td>
                 <td>{candidate.location || "-"}</td>
-                <td className="max-w-[220px] whitespace-normal break-words">
-                  {candidate.presentAddress || "-"}
-                </td>
-                <td className="max-w-[220px] whitespace-normal break-words">
-                  {candidate.permanentAddress || "-"}
-                </td>
                 <td>{formatDate(candidate.dateOfBirth)}</td>
                 <td>{candidate.keySkill || "-"}</td>
                 <td>

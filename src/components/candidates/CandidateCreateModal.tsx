@@ -61,8 +61,6 @@ const formSchema = z.object({
     .or(z.literal("")),
   company: z.string().trim().max(255, "Company is too long").optional().or(z.literal("")),
   location: z.string().trim().max(255, "Location is too long").optional().or(z.literal("")),
-  presentAddress: z.string().trim().optional().or(z.literal("")),
-  permanentAddress: z.string().trim().optional().or(z.literal("")),
   dateOfBirth: z.string().optional().or(z.literal("")),
   keySkill: z.string().trim().optional().or(z.literal("")),
   skills: z.string().trim().optional().or(z.literal("")),
@@ -139,8 +137,6 @@ export function CandidateCreateModal({
       phone: "",
       company: "",
       location: "",
-      presentAddress: "",
-      permanentAddress: "",
       dateOfBirth: "",
       keySkill: "",
       skills: "",
@@ -183,8 +179,6 @@ export function CandidateCreateModal({
       phone: candidate?.phone || "",
       company: candidate?.company || "",
       location: candidate?.location || "",
-      presentAddress: candidate?.presentAddress || "",
-      permanentAddress: candidate?.permanentAddress || "",
       dateOfBirth: candidate?.dateOfBirth || "",
       keySkill: candidate?.keySkill || "",
       skills: candidate?.skills.join(", ") || "",
@@ -212,8 +206,6 @@ export function CandidateCreateModal({
       phone: values.phone?.trim() || undefined,
       company: values.company?.trim() || undefined,
       location: values.location?.trim() || undefined,
-      presentAddress: values.presentAddress?.trim() || undefined,
-      permanentAddress: values.permanentAddress?.trim() || undefined,
       dateOfBirth: values.dateOfBirth || undefined,
       keySkill: values.keySkill?.trim() || undefined,
       skills: values.skills
@@ -582,33 +574,7 @@ export function CandidateCreateModal({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="presentAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Present Address</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} rows={2} placeholder="Current address" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="permanentAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Permanent Address</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} rows={2} placeholder="Permanent address" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}

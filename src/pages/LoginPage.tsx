@@ -82,48 +82,16 @@ export default function LoginPage() {
         {/* Animated grid */}
         <div className="absolute inset-0 opacity-[0.04]" style={{
           backgroundImage: 'linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)',
-          backgroundSize: '40px 40px'
+          backgroundSize: '50px 50px'
         }} />
 
-        {/* Floating 3D-ish cards */}
-        <div
-          className="absolute top-[12%] right-[10%] w-48 h-32 rounded-2xl border border-primary/15 bg-primary/5 backdrop-blur-sm"
-        >
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-[hsl(var(--status-success))]" />
-              <span className="text-xs text-muted-foreground">Live Pipeline</span>
-            </div>
-            <div className="space-y-1.5">
-              <div className="h-2 w-full rounded-full bg-primary/10">
-                <div
-                  className="h-full rounded-full bg-primary/40"
-                  style={{ width: '60%' }}
-                />
-              </div>
-              <div className="h-2 w-3/4 rounded-full bg-primary/10">
-                <div
-                  className="h-full rounded-full bg-[hsl(var(--status-success))]/40"
-                  style={{ width: '80%' }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div
-          className="absolute bottom-[18%] right-[18%] w-40 h-28 rounded-2xl border border-primary/10 bg-primary/5 backdrop-blur-sm"
-        >
-          <div className="p-4">
-            <div className="text-xs text-muted-foreground mb-2">Hired Today</div>
-            <div className="text-2xl font-bold text-gradient">12</div>
-            <div className="text-xs text-[hsl(var(--status-success))] mt-1">↑ 24% vs last week</div>
-          </div>
-        </div>
+
+
 
 
         {/* Main content */}
-        <div className="relative z-10 flex flex-col justify-center px-16 max-w-xl">
+        <div className="relative z-10 flex flex-col justify-center px-24 max-w-xl">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-8">
               <Sparkles className="w-3 h-3" />

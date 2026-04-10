@@ -44,6 +44,7 @@ interface CandidateWorkflowActionsProps {
   clients: Client[];
   onUpdated: (candidate: Candidate) => void;
   onAcknowledged: () => void;
+  showRejectAction?: boolean;
 }
 
 function getLatestRound(timeline: ApplicationTimeline[]): number {
@@ -60,6 +61,7 @@ export function CandidateWorkflowActions({
   clients,
   onUpdated,
   onAcknowledged,
+  showRejectAction = true,
 }: CandidateWorkflowActionsProps) {
   const [dialog, setDialog] = useState<WorkflowDialog>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -100,7 +102,9 @@ export function CandidateWorkflowActions({
   const canScheduleInterview = ['new', 'screening', 'submitted', 'interviewed'].includes(candidate.currentStatus);
   const canAddFeedback = candidate.currentStatus === 'interview_scheduled';
   const canSelect = candidate.currentStatus === 'interview_scheduled';
-  const canReject = !['selected', 'hired', 'rejected', 'withdrawn'].includes(candidate.currentStatus);
+  const canReject =
+    showRejectAction &&
+    !['selected', 'hired', 'rejected', 'withdrawn'].includes(candidate.currentStatus);
   const canMarkLeft = ['selected', 'hired'].includes(candidate.currentStatus);
   const canAcknowledge = reviewableApplications.length > 0 && ['interview_scheduled', 'selected'].includes(candidate.currentStatus);
 

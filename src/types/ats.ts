@@ -50,8 +50,6 @@ export interface Candidate {
   phone?: string;
   company?: string;
   location?: string;
-  presentAddress?: string;
-  permanentAddress?: string;
   dateOfBirth?: string;
   previousEmployment?: Array<Record<string, unknown>>;
   keySkill?: string;
@@ -73,6 +71,7 @@ export interface Candidate {
   isBlacklisted: boolean;
   isLeaver: boolean;
   remark?: string;
+  otherDetails?: Record<string, unknown>;
   ctcCurrent?: number;
   ctcExpected?: number;
   isDirectInterview?: boolean;

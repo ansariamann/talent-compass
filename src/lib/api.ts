@@ -182,8 +182,6 @@ interface BackendCandidate {
   phone?: string | null;
   company?: string | null;
   location?: string | null;
-  present_address?: string | null;
-  permanent_address?: string | null;
   date_of_birth?: string | null;
   previous_employment?: Record<string, unknown>[] | null;
   key_skill?: string | null;
@@ -248,8 +246,6 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     phone: backend.phone || undefined,
     company: backend.company || undefined,
     location: backend.location || undefined,
-    presentAddress: backend.present_address || undefined,
-    permanentAddress: backend.permanent_address || undefined,
     dateOfBirth: backend.date_of_birth || undefined,
     previousEmployment: backend.previous_employment || undefined,
     keySkill: backend.key_skill || undefined,
@@ -299,8 +295,6 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.phone !== undefined) result.phone = frontend.phone;
   if (frontend.company !== undefined) result.company = frontend.company;
   if (frontend.location !== undefined) result.location = frontend.location;
-  if (frontend.presentAddress !== undefined) result.present_address = frontend.presentAddress;
-  if (frontend.permanentAddress !== undefined) result.permanent_address = frontend.permanentAddress;
   if (frontend.dateOfBirth !== undefined) result.date_of_birth = frontend.dateOfBirth;
   if (frontend.previousEmployment !== undefined) result.previous_employment = frontend.previousEmployment;
   if (frontend.keySkill !== undefined) result.key_skill = frontend.keySkill;
