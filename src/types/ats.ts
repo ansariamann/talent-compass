@@ -126,8 +126,13 @@ export interface Application {
   candidate?: Candidate;
   clientId: string;
   client?: Client;
+  jobId?: string;
   jobTitle: string;
   status: ApplicationStatus;
+  hrInterviewAcknowledged?: boolean;
+  hrInterviewAcknowledgedAt?: string;
+  hrInterviewAcknowledgedBy?: string;
+  hrInterviewAckNote?: string;
   submittedAt: string;
   lastActivityAt: string;
   notes: ApplicationNote[];
@@ -293,6 +298,7 @@ export interface DirectInterviewRecord {
   candidateId: string;
   clientId: string;
   companyId: string;
+  jobId?: string;
   interviewerId: string;
   interviewDate: string;
   position?: string;
@@ -441,4 +447,8 @@ export interface ParseJobResponse {
     raw_text_summary?: string;
     [key: string]: unknown;
   };
+}
+
+export interface HrInterviewAcknowledgePayload {
+  note?: string;
 }

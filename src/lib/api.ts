@@ -25,6 +25,7 @@ import type {
   DirectInterviewRecord,
   RejectPayload,
   ScheduleInterviewPayload,
+  HrInterviewAcknowledgePayload,
 } from '@/types/ats';
 import { getAuthToken, clearAuthToken } from '@/lib/authToken';
 
@@ -201,6 +202,7 @@ interface BackendCandidate {
   is_blacklisted?: boolean | null;
   is_direct_interview?: boolean | null;
   remark?: string | null;
+  other_details?: Record<string, unknown> | null;
   candidate_hash?: string | null;
   created_at: string;
   updated_at: string;
@@ -264,6 +266,7 @@ function transformCandidate(backend: BackendCandidate): Candidate {
     isBlacklisted: Boolean(backend.is_blacklisted),
     isLeaver: backend.status === 'LEFT',
     remark: backend.remark || undefined,
+    otherDetails: backend.other_details || undefined,
     ctcCurrent,
     ctcExpected,
     isDirectInterview: Boolean(backend.is_direct_interview),
@@ -310,6 +313,7 @@ function toBackendCandidate(frontend: Partial<Candidate>): Record<string, unknow
   if (frontend.currentStatus !== undefined) result.status = statusMap[frontend.currentStatus] || 'ACTIVE';
   if (frontend.isDirectInterview !== undefined) result.is_direct_interview = frontend.isDirectInterview;
   if (frontend.remark !== undefined) result.remark = frontend.remark;
+  if (frontend.otherDetails !== undefined) result.other_details = frontend.otherDetails;
   if (frontend.ctcCurrent !== undefined) result.ctc_current = frontend.ctcCurrent;
   if (frontend.ctcExpected !== undefined) result.ctc_expected = frontend.ctcExpected;
 
@@ -321,6 +325,7 @@ interface BackendApplication {
   id: string;
   candidate_id: string;
   client_id: string;
+  job_id?: string | null;
   client_name?: string | null;
   job_title?: string | null;
   status: string;
@@ -329,6 +334,11 @@ interface BackendApplication {
   flag_reason?: string | null;
   is_deleted: boolean;
   notes?: string | null;
+  hr_interview_acknowledged?: boolean;
+  hr_interview_acknowledged_at?: string | null;
+  hr_interview_acknowledged_by?: string | null;
+  hr_interview_ack_note?: string | null;
+  candidate?: BackendCandidate | null;
   created_at: string;
   updated_at: string;
 }
@@ -354,6 +364,7 @@ interface BackendDirectInterviewRecord {
   candidate_id: string;
   client_id: string;
   company_id: string;
+  job_id?: string | null;
   interviewer_id: string;
   interview_date: string;
   position?: string | null;
@@ -387,7 +398,9 @@ function transformApplication(backend: BackendApplication): Application {
   return {
     id: backend.id,
     candidateId: backend.candidate_id,
+    candidate: backend.candidate ? transformCandidate(backend.candidate) : undefined,
     clientId: backend.client_id,
+    jobId: backend.job_id || undefined,
     client: backend.client_name ? {
       id: backend.client_id,
       name: backend.client_name,
@@ -397,6 +410,10 @@ function transformApplication(backend: BackendApplication): Application {
     } as Client : undefined,
     jobTitle: backend.job_title || 'Unknown Position',
     status: statusMap[backend.status] || 'pending',
+    hrInterviewAcknowledged: backend.hr_interview_acknowledged ?? false,
+    hrInterviewAcknowledgedAt: backend.hr_interview_acknowledged_at || undefined,
+    hrInterviewAcknowledgedBy: backend.hr_interview_acknowledged_by || undefined,
+    hrInterviewAckNote: backend.hr_interview_ack_note || undefined,
     submittedAt: normalizeApiDate(backend.created_at) || backend.created_at,
     lastActivityAt: normalizeApiDate(backend.updated_at) || backend.updated_at,
     notes: [],
@@ -432,6 +449,7 @@ function transformDirectInterviewRecord(backend: BackendDirectInterviewRecord): 
     candidateId: backend.candidate_id,
     clientId: backend.client_id,
     companyId: backend.company_id,
+    jobId: backend.job_id || undefined,
     interviewerId: backend.interviewer_id,
     interviewDate: normalizeApiDate(backend.interview_date) || backend.interview_date,
     position: backend.position || undefined,
@@ -657,13 +675,14 @@ export const candidatesApi = {
   },
   recordDirectInterview: async (
     candidateId: string,
-    data: { interviewDate: string; companyId: string; position?: string; skills?: string[]; notes?: string; rating?: number }
+    data: { interviewDate: string; companyId: string; jobId: string; position?: string; skills?: string[]; notes?: string; rating?: number }
   ): Promise<DirectInterviewRecord> => {
     const response = await fetchWithAuth<BackendDirectInterviewRecord>(`/candidates/${candidateId}/direct-interview`, {
       method: 'POST',
       body: JSON.stringify({
         interview_date: data.interviewDate,
         company_id: data.companyId,
+        job_id: data.jobId,
         position: data.position,
         skills: data.skills,
         notes: data.notes,
@@ -692,7 +711,7 @@ export const candidatesApi = {
   updateInterviewRecord: async (
     candidateId: string,
     interviewId: string,
-    data: { interviewDate?: string; companyId?: string; position?: string; skills?: string[]; notes?: string; rating?: number }
+    data: { interviewDate?: string; companyId?: string; jobId?: string; position?: string; skills?: string[]; notes?: string; rating?: number }
   ): Promise<DirectInterviewRecord> => {
     const response = await fetchWithAuth<BackendDirectInterviewRecord>(
       `/candidates/${candidateId}/interview-history/${interviewId}`,
@@ -701,6 +720,7 @@ export const candidatesApi = {
         body: JSON.stringify({
           interview_date: data.interviewDate,
           company_id: data.companyId,
+          job_id: data.jobId,
           position: data.position,
           skills: data.skills,
           notes: data.notes,
@@ -754,15 +774,13 @@ export const applicationsApi = {
     return transformApplication(response);
   },
 
-  create: async (data: { candidateId: string; clientId: string; jobId?: string; jobTitle?: string; note?: string }): Promise<Application> => {
+  create: async (data: { candidateId: string; clientId: string; jobId: string; jobTitle?: string; note?: string }): Promise<Application> => {
     const backendData: Record<string, unknown> = {
       candidate_id: data.candidateId,
       client_id: data.clientId,
+      job_id: data.jobId,
       job_title: data.jobTitle,
     };
-    if (data.jobId) {
-      backendData.job_id = data.jobId;
-    }
     if (data.note) {
       backendData.notes = data.note;
     }
@@ -845,6 +863,17 @@ export const applicationsApi = {
     const response = await fetchWithAuth<BackendApplication>(
       `/applications/${id}/status?${params}`,
       { method: 'PUT' }
+    );
+    return transformApplication(response);
+  },
+
+  acknowledgeHrInterview: async (id: string, payload: HrInterviewAcknowledgePayload): Promise<Application> => {
+    const response = await fetchWithAuth<BackendApplication>(
+      `/applications/${id}/acknowledge-hr-interview`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ note: payload.note }),
+      }
     );
     return transformApplication(response);
   },

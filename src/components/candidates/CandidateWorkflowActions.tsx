@@ -270,7 +270,7 @@ export function CandidateWorkflowActions({
     }
     setLoadingAction('ack');
     try {
-      await applicationsApi.updateStatus(ackApplicationId, 'interview', ackNote.trim() || undefined);
+      await applicationsApi.acknowledgeHrInterview(ackApplicationId, { note: ackNote.trim() || undefined });
       toast.success('Interview acknowledgement sent to client for review');
       onAcknowledged();
       closeDialog();

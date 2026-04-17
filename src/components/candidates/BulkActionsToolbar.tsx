@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   FileJson,
   Copy,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ interface BulkActionsToolbarProps {
   onStatusChange: (candidateIds: string[], status: CandidateStatus) => void;
   onAssignToClient: () => void;
   onMergeDuplicates?: (candidateIds: string[]) => void;
+  onDeleteCandidates?: (candidateIds: string[]) => void | Promise<void>;
 }
 
 const statusOptions: {
@@ -58,6 +60,7 @@ export function BulkActionsToolbar({
   onStatusChange,
   onAssignToClient,
   onMergeDuplicates,
+  onDeleteCandidates,
 }: BulkActionsToolbarProps) {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -127,6 +130,17 @@ export function BulkActionsToolbar({
     onAssignToClient();
   };
 
+  const handleDeleteCandidates = async () => {
+    if (!onDeleteCandidates) return;
+
+    const confirmed = window.confirm(
+      `Delete ${count} selected candidate${count > 1 ? "s" : ""}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    await onDeleteCandidates(selectedCandidates.map((c) => c.id));
+  };
+
   if (count === 0) return null;
 
   return (
@@ -181,6 +195,20 @@ export function BulkActionsToolbar({
         >
           <Copy className="w-4 h-4 mr-2" />
           Merge Duplicates
+        </Button>
+      )}
+
+      {onDeleteCandidates && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            void handleDeleteCandidates();
+          }}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete Selected
         </Button>
       )}
 

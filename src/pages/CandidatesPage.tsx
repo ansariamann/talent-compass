@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CandidateTable } from "@/components/candidates/CandidateTable";
 import { CandidateFilters } from "@/components/candidates/CandidateFilters";
-import { CandidateDetailPanel } from "@/components/candidates/CandidateDetailPanel";
 import { CandidateDetailModal } from "@/components/candidates/CandidateDetailModal";
 import { CandidateCreateModal } from "@/components/candidates/CandidateCreateModal";
 import { EnhancedSearch } from "@/components/search/EnhancedSearch";
@@ -12,7 +11,7 @@ import { MergeCandidatesModal } from "@/components/candidates/MergeCandidatesMod
 import { useCandidates, useDeleteCandidate, useUpdateCandidate } from "@/hooks/useCandidates";
 import { useClients } from "@/hooks/useClients";
 import { enrichCandidatesWithDuplicateInfo } from "@/lib/duplicateDetection";
-import { Loader2, AlertCircle, Plus } from "lucide-react";
+import { Loader2, AlertCircle, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type {
@@ -23,9 +22,6 @@ import type {
 
 export default function CandidatesPage() {
   const pageSize = 25;
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
-    null
-  );
   const [modalCandidate, setModalCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -81,21 +77,19 @@ export default function CandidatesPage() {
         searchInput?.focus();
       }
 
-      // Escape to close panels/modal (priority: modal > detail panel)
+      // Escape to close the full candidate modal.
       if (e.key === "Escape") {
         e.preventDefault();
         if (isModalOpen) {
           setIsModalOpen(false);
           setModalCandidate(null);
-        } else if (selectedCandidate) {
-          setSelectedCandidate(null);
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCandidate, isModalOpen]);
+  }, [isModalOpen]);
 
   // Filter candidates locally only for toggles not supported by backend query params.
   const filteredCandidates = useMemo(() => {
@@ -146,10 +140,6 @@ export default function CandidatesPage() {
     setModalCandidate(null);
   };
 
-  const handleClosePanel = () => {
-    setSelectedCandidate(null);
-  };
-
   const handleClearSelection = () => {
     setSelectedIds([]);
   };
@@ -163,12 +153,30 @@ export default function CandidatesPage() {
     try {
       await deleteCandidateMutation.mutateAsync(candidateId);
       setSelectedIds((current) => current.filter((id) => id !== candidateId));
-      setSelectedCandidate((current) => (current?.id === candidateId ? null : current));
       setModalCandidate((current) => (current?.id === candidateId ? null : current));
       toast.success("Candidate deleted");
       refetch();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete candidate");
+    }
+  };
+
+  const handleBulkDeleteCandidates = async (candidateIds: string[]) => {
+    try {
+      for (const candidateId of candidateIds) {
+        await deleteCandidateMutation.mutateAsync(candidateId);
+      }
+
+      setSelectedIds([]);
+      setModalCandidate((current) =>
+        current && candidateIds.includes(current.id) ? null : current
+      );
+      toast.success(
+        `Deleted ${candidateIds.length} candidate${candidateIds.length > 1 ? "s" : ""}`
+      );
+      refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete selected candidates");
     }
   };
 
@@ -239,17 +247,28 @@ export default function CandidatesPage() {
   };
 
   const SearchComponent = (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        setEditingCandidate(null);
-        setIsCreateModalOpen(true);
-      }}
-    >
-      <Plus className="mr-2 h-4 w-4" />
-      Add Candidate
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => refetch()}
+        disabled={isLoading}
+      >
+        <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+        Refresh
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setEditingCandidate(null);
+          setIsCreateModalOpen(true);
+        }}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add Candidate
+      </Button>
+    </div>
   );
 
   // Loading state
@@ -292,9 +311,7 @@ export default function CandidatesPage() {
   return (
     <DashboardLayout title="Candidates" searchComponent={SearchComponent}>
       <div className="flex h-[calc(100vh-4rem)]">
-        {/* Main content area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Search & Filters */}
           <div className="shrink-0 px-6 pt-4 pb-2">
             <EnhancedSearch
               value={searchQuery}
@@ -311,7 +328,6 @@ export default function CandidatesPage() {
             />
           </div>
 
-          {/* Bulk Actions Toolbar */}
           {selectedIds.length > 0 && (
             <div className="shrink-0 p-4 border-b border-border">
               <BulkActionsToolbar
@@ -321,24 +337,23 @@ export default function CandidatesPage() {
                 onStatusChange={handleBulkStatusChange}
                 onAssignToClient={() => setIsSubmitModalOpen(true)}
                 onMergeDuplicates={handleMergeDuplicates}
+                onDeleteCandidates={handleBulkDeleteCandidates}
               />
             </div>
           )}
 
-          {/* Table */}
           <div className="flex-1 overflow-auto">
             <CandidateTable
               candidates={paginatedCandidates}
-              onSelectCandidate={setSelectedCandidate}
+              onSelectCandidate={handleOpenDetail}
               onEditCandidate={handleEditCandidate}
               onDeleteCandidate={handleDeleteCandidate}
-              selectedId={selectedCandidate?.id}
+              selectedId={isModalOpen ? modalCandidate?.id : undefined}
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
             />
           </div>
 
-          {/* Pagination */}
           {filteredCandidates.length > pageSize && (
             <div className="shrink-0 px-6 py-3 border-t border-border flex items-center justify-between bg-muted/20">
               <span className="text-sm text-muted-foreground">
@@ -369,17 +384,6 @@ export default function CandidatesPage() {
             </div>
           )}
         </div>
-
-        {/* Detail panel */}
-        {selectedCandidate && (
-          <div className="w-96 shrink-0 border-l border-border overflow-auto animate-in slide-in-from-right-4 duration-200">
-            <CandidateDetailPanel
-              candidate={selectedCandidate}
-              onClose={handleClosePanel}
-              onOpenFull={() => handleOpenDetail(selectedCandidate)}
-            />
-          </div>
-        )}
       </div>
 
       {/* Detail Modal */}
@@ -392,7 +396,6 @@ export default function CandidatesPage() {
           }}
           onCandidateUpdated={(updatedCandidate) => {
             setModalCandidate(updatedCandidate);
-            setSelectedCandidate((current) => (current?.id === updatedCandidate.id ? updatedCandidate : current));
             refetch();
           }}
         />
@@ -428,9 +431,6 @@ export default function CandidatesPage() {
         candidate={editingCandidate}
         onSuccess={(savedCandidate) => {
           setEditingCandidate(null);
-          setSelectedCandidate((current) =>
-            current?.id === savedCandidate.id ? savedCandidate : current
-          );
           setModalCandidate((current) =>
             current?.id === savedCandidate.id ? savedCandidate : current
           );

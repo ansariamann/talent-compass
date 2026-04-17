@@ -111,6 +111,26 @@ function toFriendlyDetails(log: ActivityLog): string[] {
   return lines;
 }
 
+function shouldHideLog(log: ActivityLog): boolean {
+  if (log.action_type !== "HR_DASHBOARD_API_REQUEST") {
+    return false;
+  }
+
+  const endpoint = typeof log.details?.endpoint === "string" ? log.details.endpoint : "";
+  const statusCode =
+    typeof log.details?.status_code === "number" ? log.details.status_code : undefined;
+
+  if (statusCode !== undefined && statusCode >= 400) {
+    return false;
+  }
+
+  return (
+    endpoint.startsWith("/jobs") ||
+    endpoint.startsWith("/applications") ||
+    endpoint.startsWith("/clients")
+  );
+}
+
 export default function ActivityLogsPage() {
   const [page, setPage] = useState(1);
   const [startDateInput, setStartDateInput] = useState("");
@@ -120,6 +140,7 @@ export default function ActivityLogsPage() {
   const { user } = useAuth();
   
   const isAdmin = user?.role?.toLowerCase() === "hr_admin";
+  const visibleLogs = data?.data.filter((log) => !shouldHideLog(log)) || [];
 
   const renderIcon = (type: string) => {
     switch (type) {
@@ -217,14 +238,14 @@ export default function ActivityLogsPage() {
                     Failed to load activity logs
                   </TableCell>
                 </TableRow>
-              ) : !data || data.data.length === 0 ? (
+              ) : visibleLogs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                     No activity logs found.
                   </TableCell>
                 </TableRow>
               ) : (
-                data.data.map((log) => {
+                visibleLogs.map((log) => {
                   const details = toFriendlyDetails(log);
                   return (
                     <TableRow key={log.id} className="group transition-colors hover:bg-white/5">
@@ -262,7 +283,7 @@ export default function ActivityLogsPage() {
         {data && data.totalPages > 1 && (
           <div className="p-4 border-t border-white/10 flex justify-between items-center bg-black/20">
             <span className="text-sm text-muted-foreground">
-              Showing {data.data.length} of {data.total} entries
+              Showing {visibleLogs.length} of {data.total} entries
             </span>
             <div className="flex gap-2">
               <Button

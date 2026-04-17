@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { candidatesApi } from "@/lib/api";
 import type { Candidate } from "@/types/ats";
 import { useClients } from "@/hooks/useClients";
+import { useJobs } from "@/hooks/useJobs";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,7 @@ const formSchema = z.object({
   candidate_id: z.string().min(1, "Please select a candidate"),
   interview_date: z.string().min(1, "Interview date is required"),
   company_id: z.string().min(1, "Please select a company"),
-  position: z.string().min(1, "Position is required"),
+  job_id: z.string().min(1, "Please select a vacant job"),
   skills: z.string().optional(),
   notes: z.string().optional(),
   rating: z.coerce.number().min(1).max(5).optional(),
@@ -70,7 +71,7 @@ export function AssignExistingInterviewDialog({
       candidate_id: "",
       interview_date: new Date().toISOString().slice(0, 16),
       company_id: "",
-      position: "",
+      job_id: "",
       skills: "",
       notes: "",
       rating: undefined,
@@ -116,6 +117,27 @@ export function AssignExistingInterviewDialog({
     () => candidates.find((candidate) => candidate.id === form.watch("candidate_id")) || null,
     [candidates, form]
   );
+  const selectedCompanyId = form.watch("company_id");
+  const selectedJobId = form.watch("job_id");
+  const jobFilters = useMemo(
+    () => (selectedCompanyId ? { clientId: selectedCompanyId } : {}),
+    [selectedCompanyId]
+  );
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs(jobFilters, 1, 500);
+  const availableJobs = useMemo(
+    () =>
+      (jobsResponse?.data || []).filter(
+        (job) => job.clientId === selectedCompanyId && job.vacant !== false
+      ),
+    [jobsResponse, selectedCompanyId]
+  );
+
+  useEffect(() => {
+    if (!selectedJobId || availableJobs.some((job) => job.id === selectedJobId)) {
+      return;
+    }
+    form.setValue("job_id", "");
+  }, [availableJobs, form, selectedJobId]);
 
   const handleSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -123,7 +145,7 @@ export function AssignExistingInterviewDialog({
       await candidatesApi.recordDirectInterview(data.candidate_id, {
         interviewDate: new Date(data.interview_date).toISOString(),
         companyId: data.company_id,
-        position: data.position,
+        jobId: data.job_id,
         skills: (data.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
         notes: data.notes || undefined,
         rating: data.rating ?? undefined,
@@ -263,23 +285,42 @@ export function AssignExistingInterviewDialog({
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="position"
+                name="job_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Position</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Backend Engineer" {...field} disabled={isSubmitting} />
-                    </FormControl>
+                    <FormLabel>Job Opening</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting || !selectedCompanyId}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              !selectedCompanyId
+                                ? "Select a company first"
+                                : jobsLoading
+                                ? "Loading vacant jobs..."
+                                : "Select a vacant job"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableJobs.map((job) => (
+                          <SelectItem key={job.id} value={job.id}>
+                            {job.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="skills"

@@ -51,6 +51,139 @@ function getMostRecentWorkSummary(candidate: Candidate): { title?: string; compa
   return { title: first.title, company: first.company, dates };
 }
 
+function toReadableLabel(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatValue(value: unknown): string {
+  if (value == null || value === '') return 'Not specified';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+}
+
+function renderUnknownObject(value: Record<string, unknown>) {
+  return (
+    <div className="space-y-2">
+      {Object.entries(value).map(([key, entry]) => {
+        if (entry == null || entry === '') return null;
+        if (Array.isArray(entry)) {
+          const items = entry.map((item) => formatValue(item)).filter(Boolean);
+          if (items.length === 0) return null;
+          return (
+            <div key={key}>
+              <div className="text-xs text-muted-foreground">{toReadableLabel(key)}</div>
+              <div className="mt-1 text-sm text-foreground">{items.join(', ')}</div>
+            </div>
+          );
+        }
+        if (typeof entry === 'object') {
+          return (
+            <div key={key}>
+              <div className="text-xs text-muted-foreground">{toReadableLabel(key)}</div>
+              <div className="mt-1 rounded-md border border-border bg-muted/20 p-3">
+                {renderUnknownObject(entry as Record<string, unknown>)}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div key={key}>
+            <div className="text-xs text-muted-foreground">{toReadableLabel(key)}</div>
+            <div className="mt-1 text-sm text-foreground">{String(entry)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderOtherDetails(otherDetails?: Record<string, unknown>) {
+  if (!otherDetails) {
+    return <div className="text-sm text-muted-foreground">Not specified</div>;
+  }
+
+  const unmappedSections =
+    typeof otherDetails.unmapped_resume_sections === 'object' && otherDetails.unmapped_resume_sections
+      ? (otherDetails.unmapped_resume_sections as Record<string, unknown>)
+      : undefined;
+  const profileLinks = Array.isArray(otherDetails.profile_links)
+    ? otherDetails.profile_links.map((item) => formatValue(item)).filter(Boolean)
+    : [];
+
+  return (
+    <div className="space-y-4">
+      {unmappedSections && Object.keys(unmappedSections).length > 0 ? (
+        <div className="grid gap-3">
+          {Object.entries(unmappedSections).map(([sectionName, rawSection]) => {
+            if (!rawSection || typeof rawSection !== 'object') return null;
+            const section = rawSection as Record<string, unknown>;
+            const items = Array.isArray(section.items)
+              ? section.items.map((item) => formatValue(item)).filter(Boolean)
+              : [];
+            const text = typeof section.text === 'string' ? section.text : '';
+
+            return (
+              <div key={sectionName} className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{toReadableLabel(sectionName)}</div>
+                {items.length > 0 ? (
+                  <div className="mt-2 space-y-2">
+                    {items.map((item, index) => (
+                      <div key={`${sectionName}-${index}`} className="text-sm text-foreground">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 whitespace-pre-wrap text-sm text-foreground">{text || 'Not specified'}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {profileLinks.length > 0 ? (
+        <div className="rounded-lg border border-border bg-card p-3">
+          <div className="text-xs text-muted-foreground">Profile Links</div>
+          <div className="mt-2 space-y-2">
+            {profileLinks.map((link) => (
+              <a
+                key={link}
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="block break-all text-sm text-primary underline-offset-4 hover:underline"
+              >
+                {link}
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="text-xs text-muted-foreground">Additional Parsed Details</div>
+        <div className="mt-2">
+          {renderUnknownObject(
+            Object.fromEntries(
+              Object.entries(otherDetails).filter(
+                ([key]) =>
+                  key !== 'unmapped_resume_sections' &&
+                  key !== 'raw_text_excerpt' &&
+                  key !== 'detected_urls' &&
+                  key !== 'profile_links'
+              )
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CandidateDetailModal({
   candidate,
   open,
@@ -308,20 +441,43 @@ export function CandidateDetailModal({
                   </div>
                 </div>
                 <div className="mt-3 rounded-lg border border-border bg-card p-3">
-                  <div className="text-xs text-muted-foreground">Previous Employment (Raw)</div>
-                  <pre className="mt-2 text-xs whitespace-pre-wrap break-words text-muted-foreground">
-                    {candidate.previousEmployment
-                      ? JSON.stringify(candidate.previousEmployment, null, 2)
-                      : 'Not specified'}
-                  </pre>
+                  <div className="text-xs text-muted-foreground">Previous Employment</div>
+                  <div className="mt-2 space-y-3">
+                    {candidate.previousEmployment && candidate.previousEmployment.length > 0 ? (
+                      candidate.previousEmployment.map((employment, index) => (
+                        <div key={index} className="rounded-md border border-border bg-muted/20 p-3">
+                          <div className="font-medium text-foreground">
+                            {typeof employment.company === 'string' && employment.company
+                              ? employment.company
+                              : 'Company not specified'}
+                          </div>
+                          {typeof employment.position === 'string' && employment.position ? (
+                            <div className="mt-1 text-sm text-muted-foreground">{employment.position}</div>
+                          ) : null}
+                          {typeof employment.duration === 'string' && employment.duration ? (
+                            <div className="mt-1 text-xs text-muted-foreground">{employment.duration}</div>
+                          ) : null}
+                          {!employment.duration &&
+                          (typeof employment.start_date === 'string' || typeof employment.end_date === 'string') ? (
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {[employment.start_date, employment.end_date].filter(Boolean).join(' - ')}
+                            </div>
+                          ) : null}
+                          {typeof employment.description === 'string' && employment.description ? (
+                            <div className="mt-2 text-sm text-foreground whitespace-pre-wrap">
+                              {employment.description}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Not specified</div>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-3 rounded-lg border border-border bg-card p-3">
-                  <div className="text-xs text-muted-foreground">Other Details (Raw)</div>
-                  <pre className="mt-2 text-xs whitespace-pre-wrap break-words text-muted-foreground">
-                    {candidate.otherDetails
-                      ? JSON.stringify(candidate.otherDetails, null, 2)
-                      : 'Not specified'}
-                  </pre>
+                  <div className="text-xs text-muted-foreground">Other Details</div>
+                  <div className="mt-2">{renderOtherDetails(candidate.otherDetails)}</div>
                 </div>
               </section>
             </TabsContent>

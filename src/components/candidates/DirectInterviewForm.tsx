@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Calendar, MessageSquare, Star, Briefcase, Wrench } from "lucide-react";
+import { Loader2, Calendar, MessageSquare, Star, Wrench } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,12 +32,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Candidate, DirectInterviewRecord } from "@/types/ats";
 import { useClients } from "@/hooks/useClients";
+import { useJobs } from "@/hooks/useJobs";
 import { candidatesApi } from "@/lib/api";
 
 const formSchema = z.object({
   interview_date: z.string().min(1, "Interview date is required"),
   company_id: z.string().min(1, "Please select a company"),
-  position: z.string().min(1, "Position is required"),
+  job_id: z.string().min(1, "Please select a vacant job"),
   skills: z.string().optional(),
   notes: z.string().optional(),
   rating: z.coerce.number().min(1).max(5).optional(),
@@ -68,7 +69,7 @@ export function DirectInterviewForm({
     defaultValues: {
       interview_date: new Date().toISOString().slice(0, 16),
       company_id: "",
-      position: "",
+      job_id: "",
       skills: "",
       notes: "",
       rating: undefined,
@@ -76,6 +77,20 @@ export function DirectInterviewForm({
   });
 
   const isEditing = Boolean(interview);
+  const selectedCompanyId = form.watch("company_id");
+  const selectedJobId = form.watch("job_id");
+  const jobFilters = useMemo(
+    () => (selectedCompanyId ? { clientId: selectedCompanyId } : {}),
+    [selectedCompanyId]
+  );
+  const { data: jobsResponse, isLoading: jobsLoading } = useJobs(jobFilters, 1, 500);
+  const availableJobs = useMemo(
+    () =>
+      (jobsResponse?.data || []).filter(
+        (job) => job.clientId === selectedCompanyId && job.vacant !== false
+      ),
+    [jobsResponse, selectedCompanyId]
+  );
 
   const toLocalDatetimeValue = (value?: string) => {
     if (!value) return new Date().toISOString().slice(0, 16);
@@ -89,12 +104,19 @@ export function DirectInterviewForm({
     form.reset({
       interview_date: toLocalDatetimeValue(interview?.interviewDate),
       company_id: interview?.companyId || "",
-      position: interview?.position || "",
+      job_id: interview?.jobId || "",
       skills: interview?.skills?.join(", ") || "",
       notes: interview?.notes || "",
       rating: interview?.rating ?? undefined,
     });
   }, [form, interview, open]);
+
+  useEffect(() => {
+    if (!selectedJobId || availableJobs.some((job) => job.id === selectedJobId)) {
+      return;
+    }
+    form.setValue("job_id", "");
+  }, [availableJobs, form, selectedJobId]);
 
   const onSubmit = async (data: FormValues) => {
     if (!candidate) return;
@@ -105,7 +127,7 @@ export function DirectInterviewForm({
         await candidatesApi.updateInterviewRecord(candidate.id, interview.id, {
           interviewDate: new Date(data.interview_date).toISOString(),
           companyId: data.company_id,
-          position: data.position,
+          jobId: data.job_id,
           skills: (data.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
           notes: data.notes || undefined,
           rating: data.rating ?? undefined,
@@ -115,7 +137,7 @@ export function DirectInterviewForm({
         await candidatesApi.recordDirectInterview(candidate.id, {
           interviewDate: new Date(data.interview_date).toISOString(),
           companyId: data.company_id,
-          position: data.position,
+          jobId: data.job_id,
           skills: (data.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
           notes: data.notes || undefined,
           rating: data.rating ?? undefined,
@@ -168,6 +190,49 @@ export function DirectInterviewForm({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="job_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Job Opening</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting || !selectedCompanyId}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !selectedCompanyId
+                              ? "Select a company first"
+                              : jobsLoading
+                              ? "Loading vacant jobs..."
+                              : "Select a vacant job"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableJobs.length > 0 ? (
+                        availableJobs.map((job) => (
+                          <SelectItem key={job.id} value={job.id}>
+                            {job.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-sm text-muted-foreground">
+                          No vacant jobs available for this company.
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Company Selection */}
             <FormField
               control={form.control}
@@ -193,23 +258,6 @@ export function DirectInterviewForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="position"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4" />
-                    Position
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Senior Python Developer" {...field} disabled={isSubmitting} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

@@ -3,6 +3,7 @@ import type { User } from '@/types/ats';
 import { getAuthToken, setAuthToken, clearAuthToken } from '@/lib/authToken';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const ALLOW_DEMO_AUTH = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_AUTH === 'true';
 
 interface AuthContextType {
   user: User | null;
@@ -77,8 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Skip API check for demo tokens
-    if (token.startsWith('demo-token-')) {
+    // Skip API check for demo tokens only in explicit local demo mode.
+    if (ALLOW_DEMO_AUTH && token.startsWith('demo-token-')) {
       setUser({
         id: 'demo-user-1',
         email: 'admin@acmecorp.com',
@@ -111,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
 
-      // Demo mode credentials
+      // Demo mode credentials (explicitly opt-in for local development only)
       const DEMO_CREDENTIALS = {
         email: 'admin@acmecorp.com',
         password: 'admin123',
@@ -181,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Demo mode fallback
-      if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
+      if (ALLOW_DEMO_AUTH && email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
         setAuthToken('demo-token-' + Date.now());
         setUser(DEMO_USER);
         return { success: true };
@@ -199,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       const token = getAuthToken();
-      if (token && !token.startsWith('demo-token-')) {
+      if (token && (!token.startsWith('demo-token-') || !ALLOW_DEMO_AUTH)) {
         await fetchWithAuth('/auth/logout', { method: 'POST' });
       }
     } catch (error) {
