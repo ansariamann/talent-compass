@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getAuthToken } from '@/lib/authToken';
 import { StatusBadge } from './StatusBadge';
 import { CandidateWorkflowActions } from './CandidateWorkflowActions';
 
@@ -192,6 +193,9 @@ export function CandidateDetailModal({
 }: CandidateDetailModalProps) {
   const [timeline, setTimeline] = useState<ApplicationTimeline[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const [secureResumeUrl, setSecureResumeUrl] = useState<string | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const { data: applications = [], refetch: refetchApplications } = useApplicationsByCandidate(candidate?.id);
   const { data: clients = [] } = useClients();
 
@@ -211,9 +215,64 @@ export function CandidateDetailModal({
       .finally(() => setTimelineLoading(false));
   }, [candidate?.id, open]);
 
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+
+    async function loadSecureResume() {
+      if (!candidate?.resumeUrl || !open) {
+        setSecureResumeUrl(null);
+        setResumeError(null);
+        setResumeLoading(false);
+        return;
+      }
+
+      setResumeLoading(true);
+      setResumeError(null);
+
+      try {
+        const token = getAuthToken();
+        const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+        const response = await fetch(candidate.resumeUrl, { headers });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to load resume');
+        }
+
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+
+        if (!active) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+
+        setSecureResumeUrl(objectUrl);
+      } catch (error) {
+        if (!active) return;
+        setSecureResumeUrl(null);
+        setResumeError(error instanceof Error ? error.message : 'Failed to load resume');
+      } finally {
+        if (active) {
+          setResumeLoading(false);
+        }
+      }
+    }
+
+    void loadSecureResume();
+
+    return () => {
+      active = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [candidate?.resumeUrl, open]);
+
   if (!candidate) return null;
 
-  const resumeUrl = candidate.resumeUrl;
+  const resumeUrl = secureResumeUrl;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -530,6 +589,21 @@ export function CandidateDetailModal({
                   ) : (
                     <div className="text-sm text-muted-foreground">No parsed resume data.</div>
                   )}
+                </div>
+              ) : resumeLoading ? (
+                <div className="flex items-center justify-center h-[460px] text-muted-foreground">
+                  <div className="text-center">
+                    <FileText className="w-16 h-16 mx-auto mb-4 opacity-20 animate-pulse" />
+                    <p className="text-lg">Loading resume...</p>
+                  </div>
+                </div>
+              ) : resumeError ? (
+                <div className="flex items-center justify-center h-[460px] text-muted-foreground">
+                  <div className="text-center max-w-lg px-6">
+                    <FileText className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                    <p className="text-lg">Could not load resume</p>
+                    <p className="mt-2 text-sm whitespace-pre-wrap break-words">{resumeError}</p>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-[460px] text-muted-foreground">
